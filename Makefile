@@ -40,6 +40,7 @@ $(OBJ_DIR)/usage.o \
 $(OBJ_DIR)/config.o \
 $(OBJ_DIR)/check.o \
 $(OBJ_DIR)/modules.o \
+$(OBJ_DIR)/worker.o \
 $(OBJ_DIR)/help/general_help.o \
 $(OBJ_DIR)/help/gre_help.o \
 $(OBJ_DIR)/help/tcp_udp_dccp_help.o \
@@ -55,18 +56,18 @@ $(OBJ_DIR)/help/ospf_help.o
 # OBS: Using Linker Time Optiomizer!
 #      -O3 and -fuse-linker-plugin needed on link time to use lto.
 CC=gcc
-DFLAGS=-D__HAVE_TURBO__ -DVERSION=\"5.5\"
+DFLAGS=-DVERSION=\"5.5\"
 
 #
 # You can define DEBUG if you want to use GDB. 
 #
-CFLAGS=-Wall -Wextra -I$(INCLUDE_DIR)
+CFLAGS=-Wall -Wextra -I$(INCLUDE_DIR) -std=gnu99
+LDFLAGS=-lpthread
 ifdef DEBUG
-	CFLAGS+=-O0 -std=gnu99
+	CFLAGS+=-O0
 	DFLAGS+=-D__HAVE_DEBUG__ -g
-	LDFLAGS=
 else
-	CFLAGS+=-O3 -std=gnu99 -mtune=native -flto -ffast-math -fomit-frame-pointer
+	CFLAGS+=-O3 -mtune=native -flto -ffast-math -fomit-frame-pointer
 
 	# Get architecture
 	ARCH=$(shell arch)
@@ -75,7 +76,7 @@ else
 	endif
 
   DFLAGS+=-DNDEBUG
-	LDFLAGS=-s -O3 -fuse-linker-plugin -flto
+	LDFLAGS+=-s -O3 -fuse-linker-plugin -flto
 endif
 CFLAGS+=$(DFLAGS)
 

@@ -29,7 +29,7 @@ static size_t tcp_options_len(const uint8_t, const uint8_t, const uint8_t);
 Description:   This function configures and sends the TCP packet header.
 
 Targets:       N/A */
-void tcp(const struct config_options * const __restrict__ co, size_t *size)
+void tcp(worker_data_t *data)
 {
   size_t greoptlen,   /* GRE options size. */
          tcpolen,     /* TCP options size. */
@@ -48,23 +48,27 @@ void tcp(const struct config_options * const __restrict__ co, size_t *size)
   struct tcphdr *tcp;
   struct psdhdr *pseudo;
 
-  assert(co != NULL);
+  struct config_options *co;
+
+  assert(data != NULL);
+
+  co = data->co;
 
   greoptlen = gre_opt_len(co->gre.options, co->encapsulated);
   tcpolen = tcp_options_len(co->tcp.options, co->tcp.md5, co->tcp.auth);
   tcpopt = tcpolen + TCPOLEN_PADDING(tcpolen);
-  *size = sizeof(struct iphdr)  +
+  data->upktsize = sizeof(struct iphdr)  +
           greoptlen             +
           sizeof(struct tcphdr) +
           tcpopt;
 
   /* Try to reallocate packet, if necessary */
-  alloc_packet(*size);
+  alloc_packet(data);
 
   /* IP Header structure making a pointer to Packet. */
-  ip = ip_header(packet, *size, co);
+  ip = ip_header(data);
 
-  gre_ip = gre_encapsulation(packet, co,
+  gre_ip = gre_encapsulation(data,
               sizeof(struct iphdr)  +
               sizeof(struct tcphdr) +
               tcpopt);
@@ -377,7 +381,7 @@ void tcp(const struct config_options * const __restrict__ co, size_t *size)
      */
     stemp = auth_hmac_md5_len(co->tcp.md5);
     for (counter = 0; counter < stemp; counter++)
-      *buffer.byte_ptr++ = random();
+      *buffer.byte_ptr++ = __RND(0);
   }
 
   /*
@@ -414,29 +418,25 @@ void tcp(const struct config_options * const __restrict__ co, size_t *size)
      */
     stemp = auth_hmac_md5_len(co->tcp.auth);
     for (counter = 0; counter < stemp; counter++)
-      *buffer.byte_ptr++ = random();
+      *buffer.byte_ptr++ = __RND(0);
   }
 
   /* Padding the TCP Options. */
   for (; tcpolen & 3; tcpolen++)
     *buffer.byte_ptr++ = co->tcp.nop;
 
-  length = sizeof(struct tcphdr) + tcpolen;
-
   /* Fill PSEUDO Header structure. */
   pseudo           = (struct psdhdr *)buffer.ptr;
   pseudo->saddr    = co->encapsulated ? gre_ip->saddr : ip->saddr;
   pseudo->daddr    = co->encapsulated ? gre_ip->daddr : ip->daddr;
   pseudo->zero     = 0;
-  pseudo->protocol = co->ip.protocol;
-  pseudo->len      = htons(length);
-
-  length += sizeof(struct psdhdr);
+  pseudo->protocol = data->protocol;
+  pseudo->len      = htons(length = buffer.ptr - (void *)tcp);
 
   /* Computing the checksum. */
-  tcp->check   = co->bogus_csum ? random() : cksum(tcp, length);
+  tcp->check   = co->bogus_csum ? __RND(0) : cksum(tcp, length + sizeof(struct psdhdr));
 
-  gre_checksum(packet, co, *size);
+  gre_checksum(data);
 }
 
 /* Function Name: TCP options size calculation.

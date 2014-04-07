@@ -29,6 +29,7 @@
 static struct config_options co = {
   /* XXX COMMON OPTIONS                                                         */
   .threshold = 1000,                  /* default threshold                      */
+  .threads = 1,                       /* default number of threads.             */
 
   /* XXX IP HEADER OPTIONS  (IPPROTO_IP = 0)                                    */
   .ip = {
@@ -124,9 +125,7 @@ static const struct option long_opt[] = {
   { "flood",                  no_argument,       NULL, OPTION_FLOOD                  },
   { "encapsulated",           no_argument,       NULL, OPTION_ENCAPSULATED           },
   { "bogus-csum",             no_argument,       NULL, 'B'                           },
-#ifdef  __HAVE_TURBO__
-  { "turbo",                  no_argument,       NULL, OPTION_TURBO                  },
-#endif  /* __HAVE_TURBO__ */
+  { "threads",                required_argument, NULL, OPTION_THREADS                },
   { "version",                no_argument,       NULL, 'v'                           },
   { "help",                   no_argument,       NULL, 'h'                           },
 
@@ -408,7 +407,7 @@ struct config_options *getConfigOptions(int argc, char **argv)
 
   /* Checking command line interface options. */
   opt_ind = 1;
-  while ( (cli_opts = getopt_long(argc, argv, "s:12345678FSRPAUECW:Bvh?", long_opt, &opt_ind)) != -1 )
+  while ( (cli_opts = getopt_long(argc, argv, "s:12345678FSRPAUECW:Bt:vh?", long_opt, &opt_ind)) != -1 )
   {
     switch (cli_opts)
     {
@@ -418,14 +417,18 @@ struct config_options *getConfigOptions(int argc, char **argv)
       case OPTION_ENCAPSULATED: co.encapsulated = TRUE; break;
       case 'B':                 co.bogus_csum   = TRUE; break;
 
-#ifdef  __HAVE_TURBO__
-      case OPTION_TURBO:        co.turbo        = TRUE; break;
-#endif  /* __HAVE_TURBO__ */
+      case 't':
+      case OPTION_THREADS:      co.threads = atoi(optarg); 
+                                if (co.threads <= 0)
+                                {
+                                  fprintf(stderr, "Invalid number of threads (%d).\nIt must be at least one.\n", co.threads);
+                                  exit(EXIT_FAILURE);
+                                }
+                                break;
 
-      case OPTION_LIST_PROTOCOL:
-        listProtocols();
-        exit(EXIT_SUCCESS);
-        break;
+      case OPTION_LIST_PROTOCOL:  listProtocols();
+                                  exit(EXIT_SUCCESS);
+                                  break;
 
       /* XXX GRE HEADER OPTIONS (IPPROTO_GRE = 47) */
       case OPTION_GRE_SEQUENCE_PRESENT: co.gre.options |= GRE_OPTION_SEQUENCE;
@@ -1013,7 +1016,7 @@ static int getIpAndCidrFromString(char const * const addr, T50_tmp_addr_t *addr_
                     (matches[2] << 8)  |
                     (matches[1] << 16) |
                     (matches[0] << 24)) &
-                      (0xffffffffUL << (32 - addr_ptr->cidr));
+                      ~(0xffffffffUL >> addr_ptr->cidr);
 
   return 1;
 }

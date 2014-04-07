@@ -29,7 +29,7 @@ static size_t ospf_hdr_len(const uint8_t, const uint8_t, const uint8_t, const ui
 Description:   This function configures and sends the OSPF packet header.
 
 Targets:       N/A */
-void ospf(const struct config_options * const __restrict__ co, size_t *size)
+void ospf(worker_data_t *data)
 {
   size_t greoptlen,   /* GRE options size. */
          ospf_length, /* OSPF header length. */
@@ -53,14 +53,18 @@ void ospf(const struct config_options * const __restrict__ co, size_t *size)
   struct ospf_lsa_hdr * ospf_lsa;
   struct ospf_lls_hdr * ospf_lls;
 
-  assert(co != NULL);
+  struct config_options *co;
+
+  assert(data != NULL);
+
+  co = data->co;
 
   greoptlen = gre_opt_len(co->gre.options, co->encapsulated);
   ospf_options = __RND(co->ospf.options);
   lls = TEST_BITS(ospf_options, OSPF_OPTION_LLS) ? 1 : 0;
   ospf_length = ospf_hdr_len(co->ospf.type, co->ospf.neighbor, co->ospf.lsa_type, co->ospf.dd_include_lsa);
 
-  *size = sizeof(struct iphdr) +
+  data->upktsize = sizeof(struct iphdr) +
     greoptlen                      +
     sizeof(struct ospf_hdr)        +
     sizeof(struct ospf_auth_hdr)   +
@@ -69,12 +73,12 @@ void ospf(const struct config_options * const __restrict__ co, size_t *size)
     ospf_tlv_len(co->ospf.type, lls, co->ospf.auth);
 
   /* Try to reallocate packet, if necessary */
-  alloc_packet(*size);
+  alloc_packet(data);
 
   /* IP Header structure making a pointer to Packet. */
-  ip = ip_header(packet, *size, co);
+  ip = ip_header(data);
 
-  gre_encapsulation(packet, co,
+  gre_encapsulation(data,
         sizeof(struct iphdr)           +
         sizeof(struct ospf_hdr)        +
         sizeof(struct ospf_auth_hdr)   +
@@ -315,7 +319,7 @@ build_ospf_lsupdate:
 
         /* Computing the checksum. */
         ospf_lsa->check      =  co->bogus_csum ?
-          random() :
+          __RND(0) :
           cksum(ospf_lsa, OSPF_TLEN_LSUPDATE + LSA_TLEN_ROUTER);
       }
       else if (co->ospf.lsa_type == LSA_TYPE_NETWORK)
@@ -344,7 +348,7 @@ build_ospf_lsupdate:
 
         /* Computing the checksum. */
         ospf_lsa->check      =  co->bogus_csum  ?
-          random() :
+          __RND(0) :
           cksum(ospf_lsa, OSPF_TLEN_LSUPDATE + LSA_TLEN_NETWORK);
       }
       else if (co->ospf.lsa_type == LSA_TYPE_SUMMARY_IP ||
@@ -376,7 +380,7 @@ build_ospf_lsupdate:
 
         /* Computing the checksum. */
         ospf_lsa->check =  co->bogus_csum ?
-          random() :
+          __RND(0) :
           cksum(ospf_lsa, OSPF_TLEN_LSUPDATE + LSA_TLEN_SUMMARY);
       }
       else if (co->ospf.lsa_type == LSA_TYPE_ASBR ||
@@ -418,7 +422,7 @@ build_ospf_lsupdate:
 
         /* Computing the checksum. */
         ospf_lsa->check      =  co->bogus_csum ?
-          random() :
+          __RND(0) :
           cksum(ospf_lsa, OSPF_TLEN_LSUPDATE + LSA_TLEN_ASBR);
       }
       else if (co->ospf.lsa_type == LSA_TYPE_MULTICAST)
@@ -447,7 +451,7 @@ build_ospf_lsupdate:
 
         /* Computing the checksum. */
         ospf_lsa->check      =  co->bogus_csum ?
-          random() :
+          __RND(0) :
           cksum(ospf_lsa, OSPF_TLEN_LSUPDATE + LSA_TLEN_MULTICAST);
         /* Building a generic OSPF LSA Header. */
       }
@@ -462,7 +466,7 @@ build_ospf_lsupdate:
 
         /* Computing the checksum. */
         ospf_lsa->check      =  co->bogus_csum ?
-          random() :
+          __RND(0) :
           cksum(ospf_lsa, OSPF_TLEN_LSUPDATE + LSA_TLEN_GENERIC(0));
       }
       break;
@@ -561,7 +565,7 @@ build_ospf_lsa:
 
       /* Computing the checksum. */
       ospf_lsa->check      =  co->bogus_csum ?
-        random() :
+        __RND(0) :
         cksum(ospf_lsa, LSA_TLEN_GENERIC(0));
     }
   }
@@ -571,7 +575,7 @@ build_ospf_lsa:
    */
   stemp = auth_hmac_md5_len(co->ospf.auth);
   for (counter = 0; counter < stemp; counter++)
-    *buffer.byte_ptr++ = random();
+    *buffer.byte_ptr++ = __RND(0);
 
   length += stemp;
 
@@ -661,7 +665,7 @@ build_ospf_lsa:
          */
         stemp = auth_hmac_md5_len(co->ospf.auth);
         for (counter = 0; counter < stemp; counter++)
-          *buffer.byte_ptr++ = random();
+          *buffer.byte_ptr++ = __RND(0);
 
         /*
          * OSPF Link-Local Signaling (RFC 5613)
@@ -678,7 +682,7 @@ build_ospf_lsa:
       {
         /* Computing the checksum. */
         ospf_lls->check  =  co->bogus_csum ?
-          random() :
+          __RND(0) :
           cksum(ospf_lls, ospf_tlv_len(co->ospf.type, lls, co->ospf.auth));
       }
 
@@ -697,10 +701,10 @@ build_ospf_lsa:
   if (!co->ospf.auth)
     /* Computing the checksum. */
     ospf->check   = co->bogus_csum ?
-      random() :
+      __RND(0) :
       cksum(ospf, sizeof(struct ospf_hdr) + length);
 
-  gre_checksum(packet, co, *size);
+  gre_checksum(data);
 }
 
 /* Function Name: OSPF header size calculation.

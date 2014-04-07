@@ -19,21 +19,24 @@
 
 #include <common.h>
 
-struct iphdr *gre_encapsulation(void *buffer, const struct config_options *co, uint32_t total_len)
+struct iphdr *gre_encapsulation(worker_data_t *data, uint32_t total_len)
 {
   struct iphdr *ip, *gre_ip;
   struct gre_hdr *gre;
   struct gre_sum_hdr *gre_sum;
   size_t offset;
 
-  assert(buffer != NULL);
-  assert(co != NULL);
+  struct config_options *co;
+
+  assert(data != NULL);
+
+  co = data->co;
 
   /* GRE Encapsulation takes place. */
   if (co->encapsulated)
   {
     /* GRE Header structure making a pointer to IP Header structure. */
-    gre          = (struct gre_hdr *)(buffer + sizeof(struct iphdr));
+    gre          = (struct gre_hdr *)(data->pktbuffer + sizeof(struct iphdr));
     gre->C       = co->gre.C;
     gre->K       = co->gre.K;
     gre->R       = FIELD_MUST_BE_ZERO;
@@ -51,7 +54,7 @@ struct iphdr *gre_encapsulation(void *buffer, const struct config_options *co, u
     if (TEST_BITS(co->gre.options, GRE_OPTION_CHECKSUM))
     {
       /* GRE CHECKSUM Header structure making a pointer to IP Header structure. */
-      gre_sum         = (struct gre_sum_hdr *)(buffer + offset);
+      gre_sum         = (struct gre_sum_hdr *)(data->pktbuffer + offset);
       gre_sum->offset = FIELD_MUST_BE_ZERO;
       gre_sum->check  = 0;
 
@@ -64,7 +67,7 @@ struct iphdr *gre_encapsulation(void *buffer, const struct config_options *co, u
       /* GRE KEY Header structure making a pointer to IP Header structure. */
       struct gre_key_hdr *gre_key;
 
-      gre_key      = (struct gre_key_hdr *)(buffer + offset);
+      gre_key      = (struct gre_key_hdr *)(data->pktbuffer + offset);
       gre_key->key = htonl(__RND(co->gre.key));
 
       offset += GRE_OPTLEN_KEY;
@@ -76,7 +79,7 @@ struct iphdr *gre_encapsulation(void *buffer, const struct config_options *co, u
       /* GRE SEQUENCE Header structure making a pointer to IP Header structure. */
       struct gre_seq_hdr *gre_seq;
 
-      gre_seq          = (struct gre_seq_hdr *)(buffer + offset);
+      gre_seq          = (struct gre_seq_hdr *)(data->pktbuffer + offset);
       gre_seq->sequence = htonl(__RND(co->gre.sequence));
 
       offset += GRE_OPTLEN_SEQUENCE;
@@ -93,8 +96,8 @@ struct iphdr *gre_encapsulation(void *buffer, const struct config_options *co, u
      * packet is decapsulated to insure that no packet lives forever.
      */
     /* GRE Encapsulated IP Header structure making a pointer to to IP Header structure. */
-    ip = (struct iphdr *)buffer;
-    gre_ip           = (struct iphdr *)(buffer + offset);
+    ip = (struct iphdr *)data->pktbuffer;
+    gre_ip           = (struct iphdr *)(data->pktbuffer + offset);
     gre_ip->version  = ip->version;
     gre_ip->ihl      = ip->ihl;
     gre_ip->tos      = ip->tos;
@@ -102,14 +105,14 @@ struct iphdr *gre_encapsulation(void *buffer, const struct config_options *co, u
     gre_ip->tot_len  = htons(total_len);
     gre_ip->id       = ip->id;
     gre_ip->ttl      = ip->ttl;
-    gre_ip->protocol = co->ip.protocol;
+    gre_ip->protocol = data->protocol;
     gre_ip->saddr    = co->gre.saddr ? co->gre.saddr : ip->saddr;
     gre_ip->daddr    = co->gre.daddr ? co->gre.daddr : ip->daddr;
     gre_ip->check    = 0; /* NOTE: Is it necessary? */
 
     /* Computing the checksum. */
     gre_ip->check    = co->bogus_csum ?
-      random() : cksum(gre_ip, sizeof(struct iphdr));
+      __RND(0) : cksum(gre_ip, sizeof(struct iphdr));
 
     return gre_ip;
   }
@@ -117,25 +120,27 @@ struct iphdr *gre_encapsulation(void *buffer, const struct config_options *co, u
   return NULL;
 }
 
-void gre_checksum(void *buffer, const struct config_options *co, uint32_t packet_size)
+void gre_checksum(worker_data_t *data)
 {
   struct gre_hdr *gre;
   struct gre_sum_hdr *gre_sum;
+  struct config_options *co;
 
-  assert(buffer != NULL);
-  assert(co != NULL);
+  assert(data != NULL);
+
+  co = data->co;
 
   /* GRE Encapsulation takes place. */
   if (co->encapsulated)
   {
-    gre = (struct gre_hdr *)(buffer + sizeof(struct iphdr));
+    gre = (struct gre_hdr *)(data->pktbuffer + sizeof(struct iphdr));
     gre_sum = (struct gre_sum_hdr *)((void *)gre + sizeof(struct gre_hdr));
 
     /* Computing the checksum. */
     if (TEST_BITS(co->gre.options, GRE_OPTION_CHECKSUM))
       gre_sum->check  = co->bogus_csum ?
-        random() :
-        cksum(gre, packet_size - sizeof(struct iphdr));
+        __RND(0) :
+        cksum(gre, data->upktsize - sizeof(struct iphdr));
   }
 }
 

@@ -93,20 +93,24 @@ void closeSocket(void)
     close(fd);
 }
 
-void sendPacket(const void * const buffer, size_t size, const struct config_options * const __restrict__ co)
+void sendPacket(const worker_data_t * const __restrict__ data)
 {
   struct sockaddr_in sin;
+  struct config_options *co;
 
-  assert(buffer != NULL);
-  assert(size > 0);
-  assert(co != NULL);
+  assert(data != NULL);
+  assert(data->co != NULL);
+  assert(data->pktbuffer != NULL);
+
+  co = data->co;
 
   sin.sin_family      = AF_INET; 
   sin.sin_port        = htons(IPPORT_RND(co->dest)); 
-  sin.sin_addr.s_addr = co->ip.daddr; 
+  sin.sin_addr.s_addr = data->daddr; 
 
   if ((sendto(fd, 
-              buffer, size, 
+              data->pktbuffer, 
+              data->upktsize, 
               MSG_NOSIGNAL, 
               (struct sockaddr *)&sin, 
               sizeof(struct sockaddr)) == -1) && 

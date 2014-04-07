@@ -24,7 +24,7 @@
 Description:   This function configures and sends the DCCP packet header.
 
 Targets:       N/A */
-void dccp(const struct config_options * const __restrict__ co, size_t *size)
+void dccp(worker_data_t *data)
 {
   size_t greoptlen,   /* GRE options size. */
          dccp_length, /* DCCP header length. */
@@ -50,25 +50,30 @@ void dccp(const struct config_options * const __restrict__ co, size_t *size)
   struct dccp_hdr_ack_bits * dccp_ack;
   struct dccp_hdr_reset * dccp_rst;
 
-  assert(co != NULL);
+  struct config_options *co;
+
+  assert(data != NULL);
+
+  co = data->co;
 
   greoptlen = gre_opt_len(co->gre.options, co->encapsulated);
   dccp_length = dccp_packet_hdr_len(co->dccp.type);
   dccp_ext_length = (co->dccp.ext ? sizeof(struct dccp_hdr_ext) : 0);
-  *size = sizeof(struct iphdr) +
+  data->upktsize = sizeof(struct iphdr) +
     greoptlen               +
     sizeof(struct dccp_hdr) +
     dccp_ext_length         +
     dccp_length;
 
+  
   /* Try to reallocate packet, if necessary */
-  alloc_packet(*size);
+  alloc_packet(data);
 
   /* IP Header structure making a pointer to Packet. */
-  ip = ip_header(packet, *size, co);
+  ip = ip_header(data);
 
   /* Prepare GRE encapsulation, if needed */
-  gre_ip = gre_encapsulation(packet, co,
+  gre_ip = gre_encapsulation(data,
         sizeof(struct iphdr) +
         sizeof(struct dccp_hdr) +
         dccp_ext_length         +
@@ -112,7 +117,8 @@ void dccp(const struct config_options * const __restrict__ co, size_t *size)
    *                  (CsCov-1)*4 bytes of the packet's application data.
    */
   dccp->dccph_cscov    = co->dccp.cscov ?
-    (co->dccp.cscov - 1) * 4 : (co->bogus_csum ? random() : co->dccp.cscov);
+    (co->dccp.cscov - 1) * 4 : 
+    (co->bogus_csum ? __RND(0) : co->dccp.cscov);
 
   /*
    * Datagram Congestion Control Protocol (DCCP) (RFC 4340)
@@ -158,8 +164,6 @@ void dccp(const struct config_options * const __restrict__ co, size_t *size)
   dccp->dccph_seq      = htons(__RND(co->dccp.sequence_01));
   dccp->dccph_seq2     = co->dccp.ext ? 0 : __RND(co->dccp.sequence_02);
   dccp->dccph_checksum = 0;
-
-  length  = sizeof(struct dccp_hdr);
 
   /* NOTE: Not using union 'mptr_t' this time!!! */
   buffer_ptr = (void *)dccp + sizeof(struct dccp_hdr);
@@ -233,13 +237,13 @@ void dccp(const struct config_options * const __restrict__ co, size_t *size)
   pseudo->saddr = co->encapsulated ? gre_ip->saddr : ip->saddr;
   pseudo->daddr = co->encapsulated ? gre_ip->daddr : ip->daddr;
   pseudo->zero  = 0;
-  pseudo->protocol = co->ip.protocol;
+  pseudo->protocol = data->protocol;
   pseudo->len      = htons(length = buffer_ptr - (void *)dccp);
 
   /* Computing the checksum. */
-  dccp->dccph_checksum = co->bogus_csum ? random() : 
+  dccp->dccph_checksum = co->bogus_csum ? __RND(0) : 
     cksum(dccp, length + sizeof(struct psdhdr));
 
   /* Finish GRE encapsulation, if needed */
-  gre_checksum(packet, co, *size);
+  gre_checksum(data);
 }

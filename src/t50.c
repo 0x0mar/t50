@@ -20,8 +20,6 @@
 #include <common.h>
 #include <sys/wait.h> /* POSIX.1 compliant */
 
-static pid_t pid = -1;      /* -1 is a trick used when __HAVE_TURBO__ isn't defined. */
-
 static void initialize(void);
 static const char *getOrdinalSuffix(unsigned);
 static const char *getMonth(unsigned);
@@ -31,8 +29,9 @@ int main(int argc, char *argv[])
 {
   struct config_options *co;  /* Pointer to options. */
   struct cidr *cidr_ptr;      /* Pointer to cidr host id and 1st ip address. */
-  modules_table_t *ptbl;      /* Pointer to modules table */
-  uint8_t proto;              /* Used on main loop. */
+
+  time_t lt;
+  struct tm *tm;
 
   initialize();
 
@@ -51,152 +50,56 @@ int main(int argc, char *argv[])
   if (!checkConfigOptions(co))
     return EXIT_FAILURE;
 
-  /* Setting socket file descriptor. */
-  /* NOTE: createSocket() handles its own errors before returning. */
-  createSocket();
-
   /* Setup random seed using current date/time timestamp. */
   /* NOTE: Random seed don't need to be so precise! */
   srandom(time(NULL));
 
-#ifdef  __HAVE_TURBO__
-  /* Entering in TURBO. */
-  if (co->turbo)
-  {
-    /* Decides if it's necessary to fork a new process. */
-    if ((co->ip.protocol == IPPROTO_T50 && co->threshold > (threshold_t)getNumberOfRegisteredModules()) || 
-        (co->ip.protocol != IPPROTO_T50 && co->threshold > 1))
-    {
-      threshold_t new_threshold;
-
-      if ((pid = fork()) == -1)
-      {
-        perror("Error creating child process. Exiting...");
-        return EXIT_FAILURE;
-      }
-
-      /* Setting the priority to both parent and child process to highly favorable scheduling value. */
-      /* FIXME: Why not setup this value when t50 runs as a single process? */
-      if (setpriority(PRIO_PROCESS, PRIO_PROCESS, -15)  == -1)
-      {
-        perror("Error setting process priority. Exiting...");
-        return EXIT_FAILURE;
-      }
-
-      /* Divide the process iterations in main loop between processes. */
-      new_threshold = co->threshold / 2; 
-
-      /* FIX: Ooops! Parent process get the extra packet, if given threshold is odd. */
-      if ((co->threshold % 2) && !IS_CHILD_PID(pid))
-        new_threshold++;
-
-      co->threshold = new_threshold;
-    }
-  }
-#endif  /* __HAVE_TURBO__ */
-
   /* Calculates CIDR for destination address. */
   cidr_ptr = config_cidr(co->bits, co->ip.daddr);
 
-  /* Show launch info only for parent process. */
-  if (!IS_CHILD_PID(pid))
-  {
-    time_t lt;
-    struct tm *tm;
+  /* Setting socket file descriptor. */
+  /* NOTE: createSocket() handles its own errors before returning. */
+  createSocket();
 
-    /* Getting the local time. */
-    lt = time(NULL); 
-    tm = localtime(&lt);
+  /* Show launch info. */
+  lt = time(NULL); 
+  tm = localtime(&lt);
 
-    printf("\b\n%s %s successfully launched on %s %2d%s %d %.02d:%.02d:%.02d\n",
-      PACKAGE,  
-      VERSION, 
-      getMonth(tm->tm_mon), 
-      tm->tm_mday, 
-      getOrdinalSuffix(tm->tm_mday),
-      (tm->tm_year + 1900), 
-      tm->tm_hour, 
-      tm->tm_min, 
-      tm->tm_sec);
-  }
+  printf("\b\n%s %s successfully launched on %s %2d%s %d %.02d:%.02d:%.02d\n",
+    PACKAGE,  
+    VERSION, 
+    getMonth(tm->tm_mon), 
+    tm->tm_mday, 
+    getOrdinalSuffix(tm->tm_mday),
+    (tm->tm_year + 1900), 
+    tm->tm_hour, 
+    tm->tm_min, 
+    tm->tm_sec);
 
-  /* Selects the initial protocol to use. */
-  proto = co->ip.protocol;
-  ptbl = mod_table;
-  if (proto != IPPROTO_T50)
-    ptbl += co->ip.protoname;
+  createWorkers(co, cidr_ptr);
+  waitForWorkers();
 
-  /* Execute if flood or while threshold greater than 0. */
-  while (co->flood || (co->threshold-- > 0))
-  {
-    /* Holds the actual packet size after module function call. */
-    size_t size;
+  closeSocket();
 
-    /* Set the destination IP address to RANDOM IP address. */
-    if (cidr_ptr->hostid)
-      co->ip.daddr = htonl(cidr_ptr->__1st_addr + 
-        (random() % cidr_ptr->hostid));
+  lt = time(NULL); 
+  tm = localtime(&lt);
 
-    /* Calls the 'module' function and sends the packet. */
-    co->ip.protocol = ptbl->protocol_id;
-    ptbl->func(co, &size);
-    sendPacket(packet, size, co);
-  
-    /* If protocol if 'T50', then get the next true protocol. */
-    if (proto == IPPROTO_T50)
-      if ((++ptbl)->func == NULL)
-        ptbl = mod_table;
-  }
-
-  /* Show termination message only for parent process. */
-  if (!IS_CHILD_PID(pid))
-  {
-    time_t lt;
-    struct tm *tm;
-
-    /* FIX: We need to wait() for child processes only if we forked one! */
-#ifdef  __HAVE_TURBO__
-    int status;
-
-    wait(&status);
-#endif
-
-    /* FIX: To graciously end the program, only the parent process can close the socket. 
-       NOTE: I realize that closing descriptors are reference counted.
-             Kept the logic just in case! */
-    closeSocket();
-
-    /* Getting the local time. */
-    lt = time(NULL); 
-    tm = localtime(&lt);
-
-    printf("\b\n%s %s successfully finished on %s %2d%s %d %.02d:%.02d:%.02d\n",
-      PACKAGE,
-      VERSION,
-      getMonth(tm->tm_mon),
-      tm->tm_mday,
-      getOrdinalSuffix(tm->tm_mday),
-      (tm->tm_year + 1900),
-      tm->tm_hour,
-      tm->tm_min,
-      tm->tm_sec);
-  }
-
-  return 0;
+  printf("\b\n%s %s successfully finished on %s %2d%s %d %.02d:%.02d:%.02d\n",
+    PACKAGE,
+    VERSION,
+    getMonth(tm->tm_mon),
+    tm->tm_mday,
+    getOrdinalSuffix(tm->tm_mday),
+    (tm->tm_year + 1900),
+    tm->tm_hour,
+    tm->tm_min,
+    tm->tm_sec);
 }
 
 /* This function handles interruptions. */
 static void signal_handler(int signal)
 {
-  /* Make sure the socket descriptor is closed. 
-     FIX: But only if this is the parent process. Closing the cloned descriptor on the
-          child process can be catastrophic to the parent. 
-     NOTE: I realize that the act of closing descriptors are reference counted.
-           Keept the logic just in case! */
-#ifdef __HAVE_TURBO__
-  if (!IS_CHILD_PID(pid))
-#endif
-    closeSocket();
+  closeSocket();
 
   /* FIX: The shell documentation (bash) specifies that a process
           when exits because a signal, must return 128+signal#. */
@@ -224,9 +127,6 @@ static void initialize(void)
   sigaction(SIGTRAP, &sa, NULL);
   sigaction(SIGTERM, &sa, NULL);
   sigaction(SIGTSTP, &sa, NULL);
-#ifdef  __HAVE_TURBO__
-  sigaction(SIGCHLD, &sa, NULL);
-#endif
 
   /* --- Make sure stdout is unbuffered (otherwise, it's line buffered). --- */
   fflush(stdout);

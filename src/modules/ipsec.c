@@ -24,7 +24,7 @@
 Description:   This function configures and sends the IPSec packet header.
 
 Targets:       N/A */
-void ipsec(const struct config_options * const __restrict__ co, size_t *size)
+void ipsec(worker_data_t *data)
 {
   size_t greoptlen,   /* GRE options size. */
          ip_ah_icv,   /* IPSec AH Integrity Check Value (ICV). */
@@ -40,12 +40,16 @@ void ipsec(const struct config_options * const __restrict__ co, size_t *size)
   struct ip_auth_hdr * ip_auth;
   struct ip_esp_hdr * ip_esp;
 
-  assert(co != NULL);
+  struct config_options *co;
+
+  assert(data != NULL);
+
+  co = data->co;
 
   greoptlen = gre_opt_len(co->gre.options, co->encapsulated);
   ip_ah_icv = sizeof(uint32_t) * 3;
   esp_data  = auth_hmac_md5_len(1);
-  *size = sizeof(struct iphdr) +
+  data->upktsize = sizeof(struct iphdr) +
     greoptlen                  +
     sizeof(struct ip_auth_hdr) +
     ip_ah_icv                  +
@@ -53,12 +57,12 @@ void ipsec(const struct config_options * const __restrict__ co, size_t *size)
     esp_data;
 
   /* Try to reallocate packet, if necessary */
-  alloc_packet(*size);
+  alloc_packet(data);
 
-  ip = ip_header(packet, *size, co);
+  ip = ip_header(data);
 
   /* GRE Encapsulation takes place. */
-  gre_encapsulation(packet, co,
+  gre_encapsulation(data,
         sizeof(struct iphdr) +
         sizeof(struct ip_auth_hdr) +
         ip_ah_icv                  +
@@ -98,7 +102,7 @@ void ipsec(const struct config_options * const __restrict__ co, size_t *size)
 
   /* Setting a fake encrypted content. */
   for (counter = 0; counter < ip_ah_icv; counter++)
-    *buffer.byte_ptr++ = random();
+    *buffer.byte_ptr++ = __RND(0);
 
   /* IPSec ESP Header structure making a pointer to Checksum. */
   ip_esp         = (struct ip_esp_hdr *)buffer.ptr;
@@ -109,8 +113,8 @@ void ipsec(const struct config_options * const __restrict__ co, size_t *size)
 
   /* Setting a fake encrypted content. */
   for (counter = 0; counter < esp_data; counter++)
-    *buffer.byte_ptr++ = random();
+    *buffer.byte_ptr++ = __RND(0);
 
   /* GRE Encapsulation takes place. */
-  gre_checksum(packet, co, *size);
+  gre_checksum(data);
 }

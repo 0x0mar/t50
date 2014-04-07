@@ -26,9 +26,7 @@ void general_help(void)
        "    --flood                   This option supersedes the \'threshold\'\n"
        "    --encapsulated            Encapsulated protocol (GRE)      (default OFF)\n"
        " -B,--bogus-csum              Bogus checksum                   (default OFF)\n"
-#ifdef  __HAVE_TURBO__
-			 "     --turbo                   Extend the performance           (default OFF)\n"
-#endif  /* __HAVE_TURBO__ */
+			 " -t,--threads NUM             Number of threads to trigger     (default 1)\n"
        " -v,--version                 Print version and exit \n"
 			 " -h,--help                    Display this help and exit\n");
 }

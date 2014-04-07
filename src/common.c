@@ -19,14 +19,20 @@
 
 #include <common.h>
 
-/* Actual packet buffer. Allocated dynamically. */
-void *packet = NULL;
-size_t current_packet_size = 0;
-
 /* "private" variable holding the number of modules. Use getNumberOfRegisteredModules() funcion to get it. */
 static size_t numOfModules = 0;
 
 /* NOTE: This routine shouldn't be inlined due to its compliexity. */
+unsigned __RND(unsigned value)
+{
+  struct random_data rndState;
+
+  if (value == 0)
+    random_r(&rndState, (int *)&value);
+
+  return value;
+}
+
 uint32_t NETMASK_RND(uint32_t foo)
 {
   uint32_t t;
@@ -34,7 +40,7 @@ uint32_t NETMASK_RND(uint32_t foo)
   if (foo != INADDR_ANY)
     t = foo;
   else
-    t = ~(0xffffffffUL >> (8 + (random() % 23)));
+    t = ~(0xffffffffUL >> (8 + (__RND(0) % 23)));
 
   return htonl(t);
 }
@@ -44,23 +50,20 @@ uint32_t NETMASK_RND(uint32_t foo)
 
    The function will reallocate memory only if the buffer isn't big enough to acomodate
    new_packet_size bytes. */
-void alloc_packet(size_t new_packet_size)
+void alloc_packet(worker_data_t *data)
 {
   void *p;
 
-	/* TEST: Because 0 will free the buffer!!! */
-  assert(new_packet_size != 0);
-
-  if (new_packet_size > current_packet_size)
+  if (data->upktsize > data->tpktsize)
   {
-    if ((p = realloc(packet, new_packet_size)) == NULL)
+    if ((p = realloc(data->pktbuffer, data->upktsize)) == NULL)
     {
       ERROR("Error reallocating packet buffer");
       exit(EXIT_FAILURE);
     }
 
-    packet = p;
-    current_packet_size = new_packet_size;
+    data->pktbuffer = p;
+    data->tpktsize = data->upktsize;
   }
 }
 

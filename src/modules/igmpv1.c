@@ -21,7 +21,7 @@
 
 /* Function Name: IGMPv1 packet header configuration.
 Description:   This function configures and sends the IGMPv1 packet header. */
-void igmpv1(const struct config_options * const __restrict__ co, size_t *size)
+void igmpv1(worker_data_t *data)
 {
   size_t greoptlen;     /* GRE options size. */
 
@@ -30,24 +30,28 @@ void igmpv1(const struct config_options * const __restrict__ co, size_t *size)
   /* IGMPv1 header. */
   struct igmphdr * igmpv1;
 
-  assert(co != NULL);
+  struct config_options *co;
+
+  assert(data != NULL);
+
+  co = data->co;
 
   /* GRE options size. */
   greoptlen = gre_opt_len(co->gre.options, co->encapsulated);
 
   /* Packet size. */
-  *size = sizeof(struct iphdr) +
+  data->upktsize = sizeof(struct iphdr) +
           greoptlen            +
           sizeof(struct igmphdr);
 
   /* Try to reallocate packet, if necessary */
-  alloc_packet(*size);
+  alloc_packet(data);
 
   /* IP Header structure making a pointer to Packet. */
-  ip = ip_header(packet, *size, co);
+  ip = ip_header(data);
 
   /* GRE Encapsulation takes place. */
-  gre_encapsulation(packet, co,
+  gre_encapsulation(data,
         sizeof(struct iphdr) +
         sizeof(struct igmphdr));
 
@@ -59,8 +63,8 @@ void igmpv1(const struct config_options * const __restrict__ co, size_t *size)
   igmpv1->csum  = 0;  /* Needed 'cause cksum() call, below! */
 
   /* Computing the checksum. */
-  igmpv1->csum  = co->bogus_csum ? random() : cksum(igmpv1, sizeof(struct igmphdr));
+  igmpv1->csum  = co->bogus_csum ? __RND(0) : cksum(igmpv1, sizeof(struct igmphdr));
 
   /* GRE Encapsulation takes place. */
-  gre_checksum(packet, co, *size);
+  gre_checksum(data);
 }

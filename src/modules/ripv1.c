@@ -26,7 +26,7 @@
 Description:   This function configures and sends the RIPv1 packet header.
 
 Targets:       N/A */
-void ripv1(const struct config_options *const co, size_t *size)
+void ripv1(worker_data_t *data)
 {
   size_t greoptlen,   /* GRE options size. */
          length;
@@ -42,22 +42,26 @@ void ripv1(const struct config_options *const co, size_t *size)
   struct udphdr * udp;
   struct psdhdr * pseudo;
 
-  assert(co != NULL);
+  struct config_options *co;
+
+  assert(data != NULL);
+
+  co = data->co;
 
   greoptlen = gre_opt_len(co->gre.options, co->encapsulated);
-  *size = sizeof(struct iphdr)  +
+  data->upktsize = sizeof(struct iphdr)  +
                 greoptlen             +
                 sizeof(struct udphdr) +
                 rip_hdr_len(0);
 
   /* Try to reallocate packet, if necessary */
-  alloc_packet(*size);
+  alloc_packet(data);
 
   /* IP Header structure making a pointer to Packet. */
-  ip = ip_header(packet, *size, co);
+  ip = ip_header(data);
 
   /* GRE Encapsulation takes place. */
-  gre_ip = gre_encapsulation(packet, co,
+  gre_ip = gre_encapsulation(data,
         sizeof(struct iphdr) +
         sizeof(struct udphdr)      +
         rip_hdr_len(0));
@@ -111,13 +115,13 @@ void ripv1(const struct config_options *const co, size_t *size)
   pseudo->saddr    = co->encapsulated ? gre_ip->saddr : ip->saddr;
   pseudo->daddr    = co->encapsulated ? gre_ip->daddr : ip->daddr;
   pseudo->zero     = 0;
-  pseudo->protocol = co->ip.protocol;
+  pseudo->protocol = data->protocol;
   pseudo->len      = htons(length = buffer.ptr - (void *)udp);
 
   /* Computing the checksum. */
-  udp->check  = co->bogus_csum ? random() : 
+  udp->check  = co->bogus_csum ? __RND(0) : 
     cksum(udp, buffer.ptr - (void *)udp + sizeof(struct psdhdr));
 
   /* GRE Encapsulation takes place. */
-  gre_checksum(packet, co, *size);
+  gre_checksum(data);
 }

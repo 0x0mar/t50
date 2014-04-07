@@ -24,7 +24,7 @@
 Description:   This function configures and sends the ICMP packet header.
 
 Targets:       N/A */
-void icmp(const struct config_options * const __restrict__ co, size_t *size)
+void icmp(worker_data_t *data)
 {
   size_t greoptlen;   /* GRE options size. */
 
@@ -33,21 +33,25 @@ void icmp(const struct config_options * const __restrict__ co, size_t *size)
   /* ICMP header. */
   struct icmphdr * icmp;
 
-  assert(co != NULL);
+  struct config_options *co;
+
+  assert(data != NULL);
+
+  co = data->co;
 
   greoptlen = gre_opt_len(co->gre.options, co->encapsulated);
-  *size = sizeof(struct iphdr) +
+  data->upktsize = sizeof(struct iphdr) +
                 greoptlen            +
                 sizeof(struct icmphdr);
 
   /* Try to reallocate packet, if necessary */
-  alloc_packet(*size);
+  alloc_packet(data);
 
   /* IP Header structure making a pointer to Packet. */
-  ip = ip_header(packet, *size, co);
+  ip = ip_header(data);
 
   /* GRE Encapsulation takes place. */
-  gre_encapsulation(packet, co,
+  gre_encapsulation(data,
         sizeof(struct iphdr) +
         sizeof(struct icmphdr));
 
@@ -63,8 +67,8 @@ void icmp(const struct config_options * const __restrict__ co, size_t *size)
   icmp->checksum = 0;
 
   /* Computing the checksum. */
-  icmp->checksum = co->bogus_csum ? random() : cksum(icmp, sizeof(struct icmphdr));
+  icmp->checksum = co->bogus_csum ? __RND(0) : cksum(icmp, sizeof(struct icmphdr));
 
   /* GRE Encapsulation takes place. */
-  gre_checksum(packet, co, *size);
+  gre_checksum(data);
 }

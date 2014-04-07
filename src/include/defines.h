@@ -36,6 +36,9 @@
 /* 24 bits?! */
 #define MAXIMUM_IP_ADDRESSES  16777215
 
+/* Maximum number of threads. */
+#define MAX_THREADS 30
+
 /* #define INADDR_ANY 0 */ /* NOTE: Already defined @ linux/in.h */
 #define IPPORT_ANY 0
 
@@ -65,7 +68,6 @@
 #define TEST_BITS(x,bits) ((x) & (bits))
 
 /* Randomizer macros and function */
-#define __RND(foo) (((foo) == 0) ? random() : (foo))
 #define INADDR_RND(foo) __RND((foo))
 #define IPPORT_RND(foo) __RND((foo))
 
@@ -75,9 +77,6 @@
 #else
 #define ERROR(s) fprintf(stderr, "%s: %s\n", PACKAGE, s);
 #endif
-
-/* Used to test if "pid" from fork() is from a child process. */
-#define IS_CHILD_PID(p) ((p) == 0)
 
 #endif
 

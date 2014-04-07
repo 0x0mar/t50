@@ -26,7 +26,7 @@
 Description:   This function configures and sends the RIPv2 packet header.
 
 Targets:       N/A */
-void ripv2(const struct config_options * const __restrict__ co, size_t *size)
+void ripv2(worker_data_t *data)
 {
   size_t greoptlen,     /* GRE options size. */
          length,
@@ -43,22 +43,26 @@ void ripv2(const struct config_options * const __restrict__ co, size_t *size)
   struct udphdr * udp;
   struct psdhdr * pseudo;
 
-  assert(co != NULL);
+  struct config_options *co;
+
+  assert(data != NULL);
+
+  co = data->co;
 
   greoptlen = gre_opt_len(co->gre.options, co->encapsulated);
-  *size = sizeof(struct iphdr)  +
+  data->upktsize = sizeof(struct iphdr)  +
           greoptlen             +
           sizeof(struct udphdr) +
           rip_hdr_len(co->rip.auth);
 
   /* Try to reallocate packet, if necessary */
-  alloc_packet(*size);
+  alloc_packet(data);
 
   /* IP Header structure making a pointer to Packet. */
-  ip = ip_header(packet, *size, co);
+  ip = ip_header(data);
 
   /* GRE Encapsulation takes place. */
-  gre_ip = gre_encapsulation(packet, co,
+  gre_ip = gre_encapsulation(data,
         sizeof(struct iphdr)  +
         sizeof(struct udphdr) +
         rip_hdr_len(co->rip.auth));
@@ -234,7 +238,7 @@ void ripv2(const struct config_options * const __restrict__ co, size_t *size)
      */
     size = auth_hmac_md5_len(co->rip.auth);
     for (counter = 0; counter < size; counter++)
-      *buffer.byte_ptr++ = random();
+      *buffer.byte_ptr++ = __RND(0);
 
     /* DON'T NEED THIS */
     /* length += RIP_TRAILER_LENGTH + size; */
@@ -245,7 +249,7 @@ void ripv2(const struct config_options * const __restrict__ co, size_t *size)
   pseudo->saddr    = co->encapsulated ? gre_ip->saddr : ip->saddr;
   pseudo->daddr    = co->encapsulated ? gre_ip->daddr : ip->daddr;
   pseudo->zero     = 0;
-  pseudo->protocol = co->ip.protocol;
+  pseudo->protocol = data->protocol;
   pseudo->len      = htons(length = buffer.ptr - (void *)udp);
 
   /* FIX: buffer.ptr points to 'pseudo' So, it is simple to calculate the size used
@@ -255,9 +259,9 @@ void ripv2(const struct config_options * const __restrict__ co, size_t *size)
           various conditionals above! */
 
   /* Computing the checksum. */
-  udp->check  = co->bogus_csum ? random() : 
+  udp->check  = co->bogus_csum ? __RND(0) : 
     cksum(udp, length + sizeof(struct psdhdr));
 
   /* GRE Encapsulation takes place. */
-  gre_checksum(packet, co, *size);
+  gre_checksum(data);
 }

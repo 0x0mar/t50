@@ -29,7 +29,7 @@ static size_t eigrp_hdr_len(const uint16_t, const uint16_t, const uint8_t, const
 Description:   This function configures and sends the EIGRP packet header.
 
 Targets:       N/A */
-void eigrp(const struct config_options * const __restrict__ co, size_t *size)
+void eigrp(worker_data_t *data)
 {
   size_t greoptlen,     /* GRE options size. */
          eigrp_tlv_len, /* EIGRP TLV size. */
@@ -46,24 +46,28 @@ void eigrp(const struct config_options * const __restrict__ co, size_t *size)
   /* EIGRP header. */
   struct eigrp_hdr * eigrp;
 
-  assert(co != NULL);
+  struct config_options *co;
+
+  assert(data != NULL);
+  
+  co = data->co;
 
   greoptlen = gre_opt_len(co->gre.options, co->encapsulated);
   prefix = __RND(co->eigrp.prefix);
   eigrp_tlv_len = eigrp_hdr_len(co->eigrp.opcode, co->eigrp.type, prefix, co->eigrp.auth);
-  *size = sizeof(struct iphdr)     +
+  data->upktsize = sizeof(struct iphdr)     +
     greoptlen                +
     sizeof(struct eigrp_hdr) +
     eigrp_tlv_len;
 
   /* Try to reallocate packet, if necessary */
-  alloc_packet(*size);
+  alloc_packet(data);
 
   /* IP Header structure making a pointer to Packet. */
-  ip = ip_header(packet, *size, co);
+  ip = ip_header(data);
 
   /* GRE Encapsulation takes place. */
-  gre_encapsulation(packet, co,
+  gre_encapsulation(data,
         sizeof(struct iphdr) +
         sizeof(struct eigrp_hdr) +
         eigrp_tlv_len);
@@ -157,7 +161,7 @@ void eigrp(const struct config_options * const __restrict__ co, size_t *size)
        * The Authentication key uses HMAC-MD5 or HMAC-SHA-1 digest.
        */
       for (counter = 0; counter < stemp; counter++)
-        *buffer.byte_ptr++ = random();
+        *buffer.byte_ptr++ = __RND(0);
 
       /* DON'T NEED THIS. */
       /* FIXME: Is this correct?!
@@ -430,10 +434,10 @@ void eigrp(const struct config_options * const __restrict__ co, size_t *size)
 
   /* Computing the checksum. */
   eigrp->check    = co->bogus_csum ?
-    random() : cksum(eigrp, buffer.ptr - (void *)eigrp);
+    __RND(0) : cksum(eigrp, buffer.ptr - (void *)eigrp);
 
   /* GRE Encapsulation takes place. */
-  gre_checksum(packet, co, *size);
+  gre_checksum(data);
 }
 
 /* EIGRP header size calculation */

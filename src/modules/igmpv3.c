@@ -21,7 +21,7 @@
 
 /* Function Name: IGMPv3 packet header configuration.
 Description:   This function configures and sends the IGMPv3 packet header. */
-void igmpv3(const struct config_options * const __restrict__ co, size_t *size)
+void igmpv3(worker_data_t *data)
 {
   size_t greoptlen,   /* GRE options size. */
          counter;
@@ -36,21 +36,25 @@ void igmpv3(const struct config_options * const __restrict__ co, size_t *size)
   struct igmpv3_report * igmpv3_report;
   struct igmpv3_grec * igmpv3_grec;
 
+  struct config_options *co;
+
   assert(co != NULL);
 
+  co = data->co;
+
   greoptlen = gre_opt_len(co->gre.options, co->encapsulated);
-  *size = sizeof(struct iphdr) +
+  data->upktsize = sizeof(struct iphdr) +
     greoptlen            +
     igmpv3_hdr_len(co->igmp.type, co->igmp.sources);
 
   /* Try to reallocate packet, if necessary */
-  alloc_packet(*size);
+  alloc_packet(data);
 
   /* IP Header structure making a pointer to Packet. */
-  ip = ip_header(packet, *size, co);
+  ip = ip_header(data);
 
   /* GRE Encapsulation takes place. */
-  gre_encapsulation(packet, co,
+  gre_encapsulation(data,
         sizeof(struct iphdr) +
         igmpv3_hdr_len(co->igmp.type, co->igmp.sources));
 
@@ -79,7 +83,7 @@ void igmpv3(const struct config_options * const __restrict__ co, size_t *size)
 
     /* Computing the checksum. */
     igmpv3_report->csum     = co->bogus_csum ?
-      random() :
+      __RND(0) :
       cksum(igmpv3_report, 
         sizeof(struct igmpv3_report) + 
         sizeof(struct igmpv3_grec)   + 
@@ -105,11 +109,11 @@ void igmpv3(const struct config_options * const __restrict__ co, size_t *size)
 
     /* Computing the checksum. */
     igmpv3_query->csum     = co->bogus_csum ?
-      random() :
+      __RND(0) :
       cksum(igmpv3_query, 
         buffer.ptr - (void *)igmpv3_query);
   }
 
   /* GRE Encapsulation takes place. */
-  gre_checksum(packet, co, *size);
+  gre_checksum(data);
 }

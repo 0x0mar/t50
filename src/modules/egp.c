@@ -24,7 +24,7 @@
 Description:   This function configures and sends the EGP packet header.
 
 Targets:       N/A */
-void egp(const struct config_options * const __restrict__ co, size_t *size)
+void egp(worker_data_t *data)
 {
   size_t greoptlen;   /* GRE options size. */
 
@@ -34,22 +34,26 @@ void egp(const struct config_options * const __restrict__ co, size_t *size)
   struct egp_hdr * egp;
   struct egp_acq_hdr * egp_acq;
 
-  assert(co != NULL);
+  struct config_options *co;
+
+  assert(data != NULL);
+
+  co = data->co;
 
   greoptlen = gre_opt_len(co->gre.options, co->encapsulated);
-  *size = sizeof(struct iphdr)   +
+  data->upktsize = sizeof(struct iphdr)   +
           greoptlen              +
           sizeof(struct egp_hdr) +
           sizeof(struct egp_acq_hdr);
 
   /* Try to reallocate packet, if necessary */
-  alloc_packet(*size);
+  alloc_packet(data);
 
   /* IP Header structure making a pointer to Packet. */
-  ip = ip_header(packet, *size, co);
+  ip = ip_header(data);
 
   /* GRE Encapsulation takes place. */
-  gre_encapsulation(packet, co,
+  gre_encapsulation(data,
         sizeof(struct iphdr)    +
         sizeof(struct egp_hdr)  +
         sizeof(struct egp_acq_hdr));
@@ -75,9 +79,9 @@ void egp(const struct config_options * const __restrict__ co, size_t *size)
   egp_acq->poll  = __RND(co->egp.poll);
 
   /* Computing the checksum. */
-  egp->check    = co->bogus_csum ? random() : 
+  egp->check    = co->bogus_csum ? __RND(0) : 
     cksum(egp, sizeof(struct egp_hdr) + sizeof(struct egp_acq_hdr));
 
   /* GRE Encapsulation takes place. */
-  gre_checksum(packet, co, *size);
+  gre_checksum(data);
 }

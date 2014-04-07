@@ -31,9 +31,7 @@ enum {
   OPTION_THRESHOLD = 128,
   OPTION_FLOOD,
   OPTION_ENCAPSULATED,
-#ifdef  __HAVE_TURBO__
-  OPTION_TURBO,
-#endif  /* __HAVE_TURBO__ */
+  OPTION_THREADS,
   OPTION_LIST_PROTOCOL,
 
   /* XXX DCCP, TCP & UDP HEADER OPTIONS            */
@@ -272,9 +270,7 @@ struct config_options {
   int       flood;                  /* flood                       */
   int       encapsulated;           /* GRE encapsulated            */
   int       bogus_csum;             /* bogus packet checksum       */
-#ifdef  __HAVE_TURBO__
-  int       turbo;                  /* duplicate the attack        */
-#endif  /* __HAVE_TURBO__ */
+  int       threads;                /* number of threads           */
 
   /* XXX DCCP, TCP & UDP HEADER OPTIONS                            */
   uint16_t  source;                 /* general source port         */

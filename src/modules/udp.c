@@ -24,7 +24,7 @@
 Description:   This function configures and sends the UDP packet header.
 
 Targets:       N/A */
-void udp(const struct config_options * const __restrict__ co, size_t *size)
+void udp(worker_data_t *data)
 {
   size_t greoptlen;   /* GRE options size. */
 
@@ -37,18 +37,22 @@ void udp(const struct config_options * const __restrict__ co, size_t *size)
   struct udphdr *udp;
   struct psdhdr *pseudo;
 
-  assert(co != NULL);
+  struct config_options *co;
+
+  assert(data != NULL);
+
+  co = data->co;
 
   greoptlen = gre_opt_len(co->gre.options, co->encapsulated);
-  *size = sizeof(struct iphdr) + greoptlen + sizeof(struct udphdr);
+  data->upktsize = sizeof(struct iphdr) + greoptlen + sizeof(struct udphdr);
 
   /* Try to reallocate packet, if necessary */
-  alloc_packet(*size);
+  alloc_packet(data);
 
   /* Fill IP header. */
-  ip = ip_header(packet, *size, co);
+  ip = ip_header(data);
 
-  gre_ip = gre_encapsulation(packet, co,
+  gre_ip = gre_encapsulation(data,
     sizeof(struct iphdr) + sizeof(struct udphdr));
 
   /* UDP Header structure making a pointer to  IP Header structure. */
@@ -63,12 +67,12 @@ void udp(const struct config_options * const __restrict__ co, size_t *size)
   pseudo->saddr    = co->encapsulated ? gre_ip->saddr : ip->saddr;
   pseudo->daddr    = co->encapsulated ? gre_ip->daddr : ip->daddr;
   pseudo->zero     = 0;
-  pseudo->protocol = co->ip.protocol;
+  pseudo->protocol = data->protocol;
   pseudo->len      = htons(sizeof(struct udphdr));
 
   /* Computing the checksum. */
-  udp->check  = co->bogus_csum ? random() :
+  udp->check  = co->bogus_csum ? __RND(0) :
     cksum(udp, sizeof(struct udphdr) + sizeof(struct psdhdr));
 
-  gre_checksum(packet, co, *size);
+  gre_checksum(data);
 }

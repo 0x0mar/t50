@@ -1,12 +1,12 @@
 /*
  *  T50 - Experimental Mixed Packet Injector
  *
- *  Copyright (C) 2010 - 2014 - T50 developers
+ *  Copyright (worker_data_t *data) 2010 - 2014 - T50 developers
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation, either version 2 of the License, or
- *  (at your option) any later version.
+ *  (worker_data_t *data) any later version.
  *
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -46,7 +46,7 @@ typedef struct {
 #define BEGIN_MODULES_TABLE modules_table_t mod_table[] = {
 #define END_MODULES_TABLE { 0, NULL, NULL, NULL } };
 
-#define MODULE_ENTRY(id,acronym,descr,func) { (id), acronym, descr, func },
+#define MODULE_ENTRY(id, acronym, descr, func) { (id), acronym, descr, func },
 
 extern modules_table_t mod_table[];
 
@@ -54,19 +54,19 @@ extern size_t getNumberOfRegisteredModules(void);
 
 /* Modules functions prototypes. 
    They took 'struct config_options' pointer and returns 'size'. */
-extern void icmp  (const struct config_options * const __restrict__, size_t *size);
-extern void igmpv1(const struct config_options * const __restrict__, size_t *size);
-extern void igmpv3(const struct config_options * const __restrict__, size_t *size);
-extern void tcp   (const struct config_options * const __restrict__, size_t *size);
-extern void egp   (const struct config_options * const __restrict__, size_t *size);
-extern void udp   (const struct config_options * const __restrict__, size_t *size);
-extern void ripv1 (const struct config_options * const __restrict__, size_t *size);
-extern void ripv2 (const struct config_options * const __restrict__, size_t *size);
-extern void dccp  (const struct config_options * const __restrict__, size_t *size);
-extern void rsvp  (const struct config_options * const __restrict__, size_t *size);
-extern void ipsec (const struct config_options * const __restrict__, size_t *size);
-extern void eigrp (const struct config_options * const __restrict__, size_t *size);
-extern void ospf  (const struct config_options * const __restrict__, size_t *size);
+extern void icmp  (worker_data_t *data);
+extern void igmpv1(worker_data_t *data);
+extern void igmpv3(worker_data_t *data);
+extern void tcp   (worker_data_t *data);
+extern void egp   (worker_data_t *data);
+extern void udp   (worker_data_t *data);
+extern void ripv1 (worker_data_t *data);
+extern void ripv2 (worker_data_t *data);
+extern void dccp  (worker_data_t *data);
+extern void rsvp  (worker_data_t *data);
+extern void ipsec (worker_data_t *data);
+extern void eigrp (worker_data_t *data);
+extern void ospf  (worker_data_t *data);
 /* --- add yours here */
 
 #endif

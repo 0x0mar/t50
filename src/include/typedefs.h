@@ -21,6 +21,7 @@
 #define __TYPEDEFS_INCLUDED__
 
 struct config_options;
+struct cidr;
 
 /* Data types */
 typedef uint32_t in_addr_t;
@@ -28,7 +29,22 @@ typedef int socket_t;
 typedef int threshold_t;  /* FIX: If we need more than 2147483648 packets sent,
                                   this type can be changed to int64_t. */
 
-typedef void (*module_func_ptr_t)(const struct config_options * const __restrict__, size_t *);
+typedef struct {
+  void *pktbuffer;
+  size_t tpktsize;    /* total packet buffer size. */
+  size_t upktsize;    /* used pakcet buffer size. */
+
+  struct cidr *cidr_ptr;
+  in_addr_t daddr;
+  int protocol;
+
+  /* read only */
+  threshold_t threshold;
+  struct config_options *co;
+} worker_data_t;
+
+
+typedef void (*module_func_ptr_t)(worker_data_t *);
 
 /* This will ease the buffers pointers manipulations. */
 typedef union {

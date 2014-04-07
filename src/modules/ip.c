@@ -19,24 +19,26 @@
 
 #include <common.h>
 
-struct iphdr *ip_header(void *buffer, size_t packet_size, const struct config_options *co)
+struct iphdr *ip_header(worker_data_t *data)
 {
   struct iphdr *ip;
+  struct config_options *co;
 
-  assert(buffer != NULL);
-  assert(co != NULL);
+  assert(data != NULL);
 
-  ip = (struct iphdr *)buffer;
+  co = data->co;
+
+  ip = (struct iphdr *)data->pktbuffer;
   ip->version  = IPVERSION;
   ip->ihl      = sizeof(struct iphdr) / 4;
   ip->tos      = co->ip.tos;
   ip->frag_off = htons(co->ip.frag_off ? (co->ip.frag_off >> 3) | IP_MF : co->ip.frag_off | IP_DF);
-  ip->tot_len  = htons(packet_size);
+  ip->tot_len  = htons(data->upktsize);
   ip->id       = htons(__RND(co->ip.id));
   ip->ttl      = co->ip.ttl;
-  ip->protocol = co->encapsulated ? IPPROTO_GRE : co->ip.protocol;
+  ip->protocol = co->encapsulated ? IPPROTO_GRE : data->protocol;
   ip->saddr    = INADDR_RND(co->ip.saddr);
-  ip->daddr    = co->ip.daddr;
+  ip->daddr    = data->daddr;
   /* The code does not have to handle the checksum. Kernel will do */
   ip->check    = 0;
 

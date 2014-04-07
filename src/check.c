@@ -21,6 +21,7 @@
 
 /* Evaluate the threshold configuration */
 static int checkThreshold(const struct config_options * const __restrict__);
+static int checkThreads(const struct config_options * const __restrict__);
 
 /* Validate options 
    NOTE: This function must be called befor forking!
@@ -62,26 +63,13 @@ int checkConfigOptions(const struct config_options * const __restrict__ co)
   if (!checkThreshold(co))
     return 0;
 
-  if (!co->flood)
-  {
-#ifdef  __HAVE_TURBO__
-    /* Sanitizing TURBO mode. */
-    if (co->turbo)
-    {
-      ERROR("turbo mode is only available in flood mode");
-      return 0;
-    }
-#endif  /* __HAVE_TURBO__ */
-  }
-  else /* if (co->flood) isn't 0 */
+  if (!checkThreads(co))
+    return 0;
+
+  if (co->flood)
   {
     /* Warning FLOOD mode. */
     puts("Entering in flood mode...");
-
-#ifdef  __HAVE_TURBO__
-    if (co->turbo)
-      puts("Activating turbo...");
-#endif  /* __HAVE_TURBO__ */
 
     /* Warning CIDR mode. */
     if (co->bits != 0)
@@ -121,6 +109,33 @@ static int checkThreshold(const struct config_options * const __restrict__ co)
       return 0;
     }
   }
+
+  return 1;
+}
+
+static int checkThreads(const struct config_options * const __restrict__ co)
+{
+  long num_processors;
+
+  if (co->threads > co->threshold)
+  {
+    ERROR("Number of threads cannot be greater than the threshold.");
+    return 0;
+  }
+
+  if (co->threads > MAX_THREADS)
+  {
+    char msg[144];
+
+    sprintf(msg, "Number of threads cannot be greater than %d.\n", MAX_THREADS);
+    ERROR(msg);
+    return 0;
+  }
+
+  num_processors = sysconf( _SC_NPROCESSORS_ONLN );
+  if (num_processors > 0)
+    if (co->threads > num_processors)
+      fprintf(stderr, "WARNING: Number of threads is greater than number of processors online.\n");
 
   return 1;
 }

@@ -28,7 +28,7 @@ static  size_t rsvp_objects_len(const uint8_t, const uint8_t, const uint8_t, con
 Description:   This function configures and sends the RSVP packet header.
 
 Targets:       N/A */
-void rsvp(const struct config_options * const __restrict__ co, size_t *size)
+void rsvp(worker_data_t *data)
 {
   size_t greoptlen,       /* GRE options size. */
          objects_length,  /* RSVP objects length. */
@@ -42,23 +42,27 @@ void rsvp(const struct config_options * const __restrict__ co, size_t *size)
   /* RSVP Common header. */
   struct rsvp_common_hdr * rsvp;
 
-  assert(co != NULL);
+  struct config_options *co;
+
+  assert(data != NULL);
+
+  co = data->co;
 
   greoptlen = gre_opt_len(co->gre.options, co->encapsulated);
   objects_length = rsvp_objects_len(co->rsvp.type, co->rsvp.scope, co->rsvp.adspec, co->rsvp.tspec);
-  *size = sizeof(struct iphdr)           +
+  data->upktsize = sizeof(struct iphdr)           +
           sizeof(struct rsvp_common_hdr) +
           greoptlen                      +
           objects_length;
 
   /* Try to reallocate the packet, if necessary */
-  alloc_packet(*size);
+  alloc_packet(data);
 
   /* IP Header structure making a pointer to Packet. */
-  ip = ip_header(packet, *size, co);
+  ip = ip_header(data);
 
   /* GRE Encapsulation takes place. */
-  gre_encapsulation(packet, co,
+  gre_encapsulation(data,
         sizeof(struct iphdr)           +
         sizeof(struct rsvp_common_hdr) +
         objects_length);
@@ -617,11 +621,11 @@ void rsvp(const struct config_options * const __restrict__ co, size_t *size)
 
   /* Computing the checksum. */
   rsvp->check   = co->bogus_csum ?
-    random() :
+    __RND(0) :
     cksum(rsvp, buffer.ptr - (void *)rsvp);
 
   /* GRE Encapsulation takes place. */
-  gre_checksum(packet, co, *size);
+  gre_checksum(data);
 }
 
 /* Function Name: RSVP objects size claculation.

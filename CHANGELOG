@@ -6,7 +6,15 @@ Legend:
 - Bug fixed
 ! Known issue / missing feature
 
-
+T50 5.5e - April 6th, 2014
+ * Begining to change T50 to use pthreads instead of fork.
+ * Check if threshold is lesser than threads.
+ * Warns if number of threads is greater than number of processors.
+ * Changed parameters os key routines to worker_data_t pointer.
+ * Changed all modules to accept only a pointer to worker_data_t type.
+ * Changed __RND macro to a function 'cause random_r() must keep state between threads.
+ * Get rid of "turbo" mode.
+ * Get rid of forking.
 
 T50 5.5 - April 2nd, 2014
  * Code compiles fine with LLVM clang 3.x;
