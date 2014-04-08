@@ -20,6 +20,11 @@
 #ifndef __DEFINES_INCLUDED__
 #define __DEFINES_INCLUDED__
 
+#include <unistd.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
 #define PACKAGE "T50"
 #define SITE "http://github.com/fredericopissarra/t50"
 
@@ -73,9 +78,9 @@
 
 /* ERROR macro */
 #ifdef __HAVE_DEBUG__
-#define ERROR(s) fprintf(stderr, "%s: %s at %s, line %d\n", PACKAGE, s, __FILE__, __LINE__);
+#define ERROR(s) { char *__str; asprintf(&__str, "%s: %s at %s, line %d\n", PACKAGE, (s), __FILE__, __LINE__); write(STDERR_FILENO, __str, strlen(__str)); free(__str); }
 #else
-#define ERROR(s) fprintf(stderr, "%s: %s\n", PACKAGE, s);
+#define ERROR(s) { char *__str; asprintf(&__str, "%s: %s\n", PACKAGE, (s)); write(STDERR_FILENO, __str, strlen(__str)); free(__str); }
 #endif
 
 #endif

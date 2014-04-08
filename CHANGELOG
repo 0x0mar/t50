@@ -15,6 +15,8 @@ T50 5.5e - April 6th, 2014
  * Changed __RND macro to a function 'cause random_r() must keep state between threads.
  * Get rid of "turbo" mode.
  * Get rid of forking.
+ - Inside a thread it's not wise to use printf() functions that use FILE *.
+   sprintf() functions works ok.
 
 T50 5.5 - April 2nd, 2014
  * Code compiles fine with LLVM clang 3.x;

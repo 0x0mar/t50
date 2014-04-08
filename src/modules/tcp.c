@@ -81,10 +81,15 @@ void tcp(worker_data_t *data)
    */
   if (tcpopt > (sizeof(struct tcphdr) * 2))
   {
-    fprintf(stderr,
+    char *stmp;
+
+    asprintf(&stmp,
         "%s(): TCP Options size (%u bytes) is bigger than two times TCP Header size\n",
         __FUNCTION__,
         (unsigned int)tcpopt);
+    write(STDERR_FILENO, stmp, strlen(stmp));
+    free(stmp);
+
     exit(EXIT_FAILURE);
   }
 
