@@ -142,7 +142,8 @@ void sendPacket(const worker_data_t * const __restrict__ data)
     p += sent;
   }
 
-  if (!num_tries)
+  /* FIX */
+  if (num_tries < 0)
   {
 error:
     ERROR("Error sending packet.");
