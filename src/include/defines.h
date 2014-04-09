@@ -36,7 +36,7 @@
 
 /* #define RAND_MAX 2147483647 */ /* NOTE: Already defined @ stdlib.h */
 #define CIDR_MINIMUM 8
-#define CIDR_MAXIMUM 30
+#define CIDR_MAXIMUM 32
 
 /* 24 bits?! */
 #define MAXIMUM_IP_ADDRESSES  16777215

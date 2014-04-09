@@ -35,16 +35,6 @@ int checkConfigOptions(const struct config_options * const __restrict__ co)
     return 0;
   }
 
-  /* Sanitizing the CIDR. */
-  if ((co->bits < CIDR_MINIMUM) || (co->bits > CIDR_MAXIMUM))
-  {
-    char errstr[64];
-
-    sprintf(errstr, "CIDR must be between %d and %d", CIDR_MINIMUM, CIDR_MAXIMUM);
-    ERROR(errstr);
-    return 0;
-  }
-
   /* Sanitizing the TCP Options SACK_Permitted and SACK Edges. */
   if (TEST_BITS(co->tcp.options, TCP_OPTION_SACK_OK) &&
       TEST_BITS(co->tcp.options, TCP_OPTION_SACK_EDGE))
