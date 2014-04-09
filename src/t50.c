@@ -129,7 +129,7 @@ static void initialize(void)
   sigaction(SIGTSTP, &sa, NULL);
 
   /* --- Make sure stdout is unbuffered (otherwise, it's line buffered). --- */
-  fflush(stdout);
+  fflush(NULL); /* Flush all streams */
   setvbuf(stdout, NULL, _IONBF, 0); 
 }
 

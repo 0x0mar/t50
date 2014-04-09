@@ -17,6 +17,9 @@ void createWorkers(const struct config_options * const __restrict__ co, struct c
   worker_data_t *pdata;
   size_t i;
 
+  assert(co != NULL);
+  assert(cidr_ptr != NULL);
+
   numOfWorkers = co->threads;
 
   if ((tids = (pthread_t *)malloc(sizeof(pthread_t) * numOfWorkers)) == NULL)
@@ -122,11 +125,17 @@ static void *worker(void *data)
     if (co->ip.protocol == IPPROTO_T50)
       pdata->protocol = ptbl->protocol_id;
 
-    /* OBS: worker_data_t have all we need! */
+    /* NOTE: worker_data_t have all we need! */
     ptbl->func(data);
 
+    /* NOTE: The SNDBUF probably is big enough to enqueue
+             all packets we sent to it. So sendPacket() must be
+             really fast! 
+
+             The synchronization is necessary 'cause we are dealing
+             with a single socket descriptor. */
     pthread_mutex_lock(&mlock);
-      /* OBS: worker_data_t have all we need! */
+      /* NOTE: worker_data_t have all we need! */
       sendPacket(data);
     pthread_mutex_unlock(&mlock);
 

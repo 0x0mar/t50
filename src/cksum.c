@@ -27,6 +27,8 @@ uint16_t cksum(void *data, size_t length)
   uint32_t t1, t2;
   uint16_t t3, t4;
 
+  assert(data != NULL);
+
   sum = 0;
 
   /* Sums 8 bytes at a time... */

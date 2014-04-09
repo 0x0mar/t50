@@ -23,6 +23,7 @@
 static size_t numOfModules = 0;
 
 /* NOTE: This routine shouldn't be inlined due to its compliexity. */
+/* FIXME: Maybe we can mark this function __attribute__((inline))? */
 unsigned __RND(unsigned value)
 {
   struct random_data rndState;
@@ -33,16 +34,13 @@ unsigned __RND(unsigned value)
   return value;
 }
 
+/* FIXME: Maybe we can mark this function __attribute__((inline))? */
 uint32_t NETMASK_RND(uint32_t foo)
 {
-  uint32_t t;
+  if (foo == INADDR_ANY)
+    foo = ~(0xffffffffUL >> (8 + (__RND(0) % 23)));
 
-  if (foo != INADDR_ANY)
-    t = foo;
-  else
-    t = ~(0xffffffffUL >> (8 + (__RND(0) % 23)));
-
-  return htonl(t);
+  return htonl(foo);
 }
 
 /* NOTE: Since VLAs are "dirty" allocations on stack frame, it's not a problem to use
@@ -74,6 +72,7 @@ size_t getNumberOfRegisteredModules(void)
 {
 	modules_table_t *ptbl;
 
+  /* scan just once in a lifetime. */
   if (numOfModules == 0)
 	  for (ptbl = mod_table; ptbl->func != NULL; ptbl++, numOfModules++);
 

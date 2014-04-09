@@ -944,7 +944,7 @@ static int getIpAndCidrFromString(char const * const addr, T50_tmp_addr_t *addr_
   t = strdup(addr);
   if (t  == NULL)
   {
-    perror("Cannot allocate temporary string");
+    PERROR("strdup");
     abort();
   }
 
@@ -1011,6 +1011,7 @@ static int getIpAndCidrFromString(char const * const addr, T50_tmp_addr_t *addr_
   regfree(&re);
 
   /* Prepare CIDR structure */
+  /* FIXME: Is it really necessary to mask the ip here? */
   addr_ptr->cidr = matches[4];
   addr_ptr->addr = ( matches[3]        |
                     (matches[2] << 8)  |

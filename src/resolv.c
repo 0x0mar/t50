@@ -26,16 +26,13 @@ in_addr_t resolv(char *name)
     struct addrinfo hints, *res, *res0 = NULL;
     struct sockaddr_in *target = NULL;
     int error;
-    char tmp[46];
 
     memset(&hints, 0, sizeof(struct addrinfo));
     hints.ai_family = PF_UNSPEC;
     hints.ai_socktype = 0;
 
     /* FIX: The "service" is not important here! */
-    error = getaddrinfo(name, NULL, &hints, &res0);
-
-    if (error)
+    if ((error = getaddrinfo(name, NULL, &hints, &res0)) != 0)
     {
       char *stmp;
 
@@ -45,7 +42,7 @@ in_addr_t resolv(char *name)
       /* NOTE: Added proper error reporting. */
       if (asprintf(&stmp, "Error on resolv(). getaddrinfo() reports: %s\n", gai_strerror(error)) == -1)
       {
-        perror("Error allocating temporary string.");
+        ERROR("Error allocating temporary string.");
         abort();
       }
 
@@ -61,16 +58,18 @@ in_addr_t resolv(char *name)
                 in_addr_t, that is an uint32_t, not an "unsigned __int128" (as ipv6 requires)! */
       if (target)
       {
-         switch (res->ai_family)
-         {
+        char tmp[46];
+
+        switch (res->ai_family)
+        {
           case AF_INET:
-            inet_ntop(AF_INET,&target->sin_addr,tmp,46);
+            inet_ntop(AF_INET,&target->sin_addr,tmp,sizeof(tmp));
             return inet_addr(tmp);
 
           case AF_INET6:
-            inet_ntop(AF_INET6,&((struct sockaddr_in6 *)target)->sin6_addr,tmp,46);
+            inet_ntop(AF_INET6,&((struct sockaddr_in6 *)target)->sin6_addr,tmp,sizeof(tmp));
             return inet_addr(tmp);
-         }
+        }
       }
     }
 

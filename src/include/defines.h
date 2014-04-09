@@ -83,5 +83,7 @@
 #define ERROR(s) { char *__str; asprintf(&__str, "%s: %s\n", PACKAGE, (s)); write(STDERR_FILENO, __str, strlen(__str)); free(__str); }
 #endif
 
+#define PERROR(s) { char *__str; asprintf(&__str, "%s:%s", __FUNCTION__, (s)); perror(__str); free(__str); }
+
 #endif
 

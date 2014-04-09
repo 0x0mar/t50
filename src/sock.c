@@ -31,14 +31,16 @@ void createSocket(void)
 	/* Setting SOCKET RAW. */
 	if( (fd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) == -1 )
 	{
-		perror("error opening raw socket");
+		PERROR("socket");
 		exit(EXIT_FAILURE);
 	}
 
 	/* Setting IP_HDRINCL. */
+  /* NOTE: This doesn't work on OS/X and Win32/64! 
+           That's it, folks! T50 is a *NIX only project! */
 	if( setsockopt(fd, IPPROTO_IP, IP_HDRINCL, nptr, sizeof(n)) == -1 )
 	{
-		perror("error setting socket options");
+		PERROR("setsockopt");
 		exit(EXIT_FAILURE);
 	}
 
@@ -48,22 +50,21 @@ void createSocket(void)
 	/* Getting SO_SNDBUF. */
 	if ( getsockopt(fd, SOL_SOCKET, SO_SNDBUF, &n, &len) == -1 )
 	{
-		perror("error getting socket buffer");
+		PERROR("getsockopt");
 		exit(EXIT_FAILURE);
 	}
 
 	/* Setting the maximum SO_SNDBUF in bytes.
-	 * 128      =  1 kilobit
-	 * 10485760 = 10 megabytes */
+     Tries to resize the buffer in 128 bytes increments (max: 10 MB). */
 	for (n += 128; n < 10485760; n += 128)
 	{
 		/* Setting SO_SNDBUF. */
 		if ( setsockopt(fd, SOL_SOCKET, SO_SNDBUF, &n, len) == -1 )
 		{
-			if(errno == ENOBUFS)	
+			if (errno == ENOBUFS)	
 				break;
 
-			perror("error setting socket buffer");
+			PERROR("getsockopt");
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -73,7 +74,7 @@ void createSocket(void)
 	/* Setting SO_BROADCAST. */
 	if( setsockopt(fd, SOL_SOCKET, SO_BROADCAST, nptr, sizeof(n)) == -1 )
 	{
-		perror("error setting socket broadcast");
+		PERROR("setsockopt");
 		exit(EXIT_FAILURE);
 	}
 #endif /* SO_BROADCAST */
@@ -81,7 +82,7 @@ void createSocket(void)
 #ifdef SO_PRIORITY
 	if( setsockopt(fd, SOL_SOCKET, SO_PRIORITY, nptr, sizeof(n)) == -1 )
 	{
-		perror("error setting socket priority");
+		PERROR("setsockopt");
 		exit(EXIT_FAILURE);
 	}
 #endif /* SO_PRIORITY */

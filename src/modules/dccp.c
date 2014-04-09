@@ -116,8 +116,7 @@ void dccp(worker_data_t *data)
    *                  options,  network-layer pseudoheader, and the initial
    *                  (CsCov-1)*4 bytes of the packet's application data.
    */
-  dccp->dccph_cscov    = co->dccp.cscov ?
-    (co->dccp.cscov - 1) * 4 : 
+  dccp->dccph_cscov    = co->dccp.cscov ? ((co->dccp.cscov - 1) * 4) : 
     (co->bogus_csum ? __RND(0) : co->dccp.cscov);
 
   /*
