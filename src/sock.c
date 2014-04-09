@@ -18,6 +18,10 @@
 */
 
 #include <common.h>
+#include <pthread.h>
+
+/* Maximum number of tries to send a packet. */
+#define MAX_SENDTO_TRIES 100
 
 /* Initialized for error condition, just in case! */
 static socket_t fd = -1;
@@ -94,10 +98,15 @@ void closeSocket(void)
     close(fd);
 }
 
+extern pthread_mutex_t mlock;
+
 void sendPacket(const worker_data_t * const __restrict__ data)
 {
   struct sockaddr_in sin;
   struct config_options *co;
+  void *p;
+  ssize_t sent, size;
+  int num_tries;
 
   assert(data != NULL);
   assert(data->co != NULL);
@@ -109,14 +118,33 @@ void sendPacket(const worker_data_t * const __restrict__ data)
   sin.sin_port        = htons(IPPORT_RND(co->dest)); 
   sin.sin_addr.s_addr = data->daddr; 
 
-  if ((sendto(fd, 
-              data->pktbuffer, 
-              data->upktsize, 
-              MSG_NOSIGNAL, 
-              (struct sockaddr *)&sin, 
-              sizeof(struct sockaddr)) == -1) && 
-      (errno != EPERM)) 
+  /* FIX: There is no garantee that sendto() will deliver the entire packet at once.
+          So, we try MAX_SENDTO_TRIES times before giving up. 
+
+          And the mutex is here now, not in worker() function anymore. */
+  p = data->pktbuffer;
+  size = data->upktsize;
+  for (num_tries = MAX_SENDTO_TRIES; size > 0 && num_tries--;) 
   {
+    pthread_mutex_lock(&mlock);
+    sent = sendto(fd, p, size, MSG_NOSIGNAL, (struct sockaddr *)&sin, sizeof(struct sockaddr));
+    pthread_mutex_unlock(&mlock);
+
+    if (sent == -1)
+    {
+      if (errno != EPERM)
+        goto error;
+
+      continue;
+    }
+
+    size -= sent;
+    p += sent;
+  }
+
+  if (!num_tries)
+  {
+error:
     ERROR("Error sending packet.");
     exit(EXIT_FAILURE);
   }

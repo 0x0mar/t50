@@ -6,7 +6,7 @@ static pthread_t *tids = NULL;
 static worker_data_t *workersData = NULL;
 static size_t numOfWorkers = 0;
 
-static pthread_mutex_t mlock = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mlock = PTHREAD_MUTEX_INITIALIZER;
 
 static void balanceWorkersThresholds(const struct config_options * const __restrict__);
 static void *worker(void *);
@@ -128,16 +128,7 @@ static void *worker(void *data)
     /* NOTE: worker_data_t have all we need! */
     ptbl->func(data);
 
-    /* NOTE: The SNDBUF probably is big enough to enqueue
-             all packets we sent to it. So sendPacket() must be
-             really fast! 
-
-             The synchronization is necessary 'cause we are dealing
-             with a single socket descriptor. */
-    pthread_mutex_lock(&mlock);
-      /* NOTE: worker_data_t have all we need! */
-      sendPacket(data);
-    pthread_mutex_unlock(&mlock);
+    sendPacket(data);
 
     if (co->ip.protocol == IPPROTO_T50)
       if ((++ptbl)->func == NULL)
