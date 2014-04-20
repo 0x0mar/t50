@@ -54,6 +54,8 @@ void alloc_packet(worker_data_t *data)
 
   if (data->upktsize > data->tpktsize)
   {
+    /* NOTE: GNU Libc documentation says malloc(), calloc() and realloc()
+             are thread safe! */
     if ((p = realloc(data->pktbuffer, data->upktsize)) == NULL)
     {
       ERROR("Error reallocating packet buffer");
