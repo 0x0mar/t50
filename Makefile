@@ -7,6 +7,10 @@
 # The final executable will be created at release/ sub-directory.
 #
 
+define checkroot()
+	@test $$(id -u) -ne 0 && ( echo 'Need root priviledge'; exit 1 )
+endef
+
 SRC_DIR=./src
 OBJ_DIR=./build
 RELEASE_DIR=./release
@@ -80,7 +84,9 @@ else
 endif
 CFLAGS+=$(DFLAGS)
 
-.PHONY: clean install
+.PHONY: all clean install uninstall
+
+all: $(TARGET)
 
 # link
 $(TARGET): $(OBJS)
@@ -103,9 +109,11 @@ clean:
 	@echo Binary executable, temporary files and packed manual file deleted.
 
 install:
+	$(checkroot)
 	gzip -9c ./doc/t50.8 > $(RELEASE_DIR)/t50.8.gz
 	install $(RELEASE_DIR)/t50 /usr/sbin/
 	install -m 0644 $(RELEASE_DIR)/t50.8.gz $(MAN_DIR)/
 
 uninstall:
+	$(checkroot)
 	rm -f $(MAN_DIR)/t50.8.gz /usr/sbin/t50
