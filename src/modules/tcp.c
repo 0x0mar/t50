@@ -60,7 +60,8 @@ void tcp(worker_data_t *data)
   data->upktsize = sizeof(struct iphdr)  +
           greoptlen             +
           sizeof(struct tcphdr) +
-          tcpopt;
+          tcpopt +
+          sizeof(struct psdhdr);
 
   /* Try to reallocate packet, if necessary */
   alloc_packet(data);

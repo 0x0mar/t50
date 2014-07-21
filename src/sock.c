@@ -114,6 +114,7 @@ void sendPacket(const worker_data_t * const __restrict__ data)
 
   co = data->co;
 
+  memset(&sin, 0, sizeof(sin));
   sin.sin_family      = AF_INET; 
   sin.sin_port        = htons(IPPORT_RND(co->dest)); 
   sin.sin_addr.s_addr = data->daddr; 

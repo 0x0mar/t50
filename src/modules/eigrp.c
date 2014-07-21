@@ -58,7 +58,8 @@ void eigrp(worker_data_t *data)
   data->upktsize = sizeof(struct iphdr)     +
     greoptlen                +
     sizeof(struct eigrp_hdr) +
-    eigrp_tlv_len;
+    eigrp_tlv_len            +
+    8;   // OBS: Ugly workaround: Must change this later.
 
   /* Try to reallocate packet, if necessary */
   alloc_packet(data);

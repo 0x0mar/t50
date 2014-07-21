@@ -53,7 +53,8 @@ void ripv2(worker_data_t *data)
   data->upktsize = sizeof(struct iphdr)  +
           greoptlen             +
           sizeof(struct udphdr) +
-          rip_hdr_len(co->rip.auth);
+          rip_hdr_len(co->rip.auth) +
+          sizeof(struct psdhdr);
 
   /* Try to reallocate packet, if necessary */
   alloc_packet(data);

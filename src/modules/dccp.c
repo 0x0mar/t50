@@ -63,7 +63,8 @@ void dccp(worker_data_t *data)
     greoptlen               +
     sizeof(struct dccp_hdr) +
     dccp_ext_length         +
-    dccp_length;
+    dccp_length             +
+    sizeof(struct psdhdr);
 
   
   /* Try to reallocate packet, if necessary */

@@ -44,7 +44,7 @@ void udp(worker_data_t *data)
   co = data->co;
 
   greoptlen = gre_opt_len(co->gre.options, co->encapsulated);
-  data->upktsize = sizeof(struct iphdr) + greoptlen + sizeof(struct udphdr);
+  data->upktsize = sizeof(struct iphdr) + greoptlen + sizeof(struct udphdr) + sizeof(struct psdhdr);
 
   /* Try to reallocate packet, if necessary */
   alloc_packet(data);
