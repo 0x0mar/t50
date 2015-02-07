@@ -27,7 +27,7 @@
 static socket_t fd = -1;
 
 /* Socket configuration */
-void createSocket(void)
+int createSocket(void)
 {
 	socklen_t len;
 	unsigned n = 1, *nptr = &n;
@@ -36,7 +36,7 @@ void createSocket(void)
 	if( (fd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) == -1 )
 	{
 		PERROR("socket");
-		exit(EXIT_FAILURE);
+		return FALSE;
 	}
 
 	/* Setting IP_HDRINCL. */
@@ -45,7 +45,7 @@ void createSocket(void)
 	if( setsockopt(fd, IPPROTO_IP, IP_HDRINCL, nptr, sizeof(n)) == -1 )
 	{
 		PERROR("setsockopt");
-		exit(EXIT_FAILURE);
+		return FALSE;
 	}
 
 /* Taken from libdnet by Dug Song. */
@@ -55,7 +55,7 @@ void createSocket(void)
 	if ( getsockopt(fd, SOL_SOCKET, SO_SNDBUF, &n, &len) == -1 )
 	{
 		PERROR("getsockopt");
-		exit(EXIT_FAILURE);
+		return FALSE;
 	}
 
 	/* Setting the maximum SO_SNDBUF in bytes.
@@ -69,7 +69,7 @@ void createSocket(void)
 				break;
 
 			PERROR("getsockopt");
-			exit(EXIT_FAILURE);
+			return FALSE;
 		}
 	}
 #endif /* SO_SNDBUF */
@@ -79,7 +79,7 @@ void createSocket(void)
 	if( setsockopt(fd, SOL_SOCKET, SO_BROADCAST, nptr, sizeof(n)) == -1 )
 	{
 		PERROR("setsockopt");
-		exit(EXIT_FAILURE);
+		return FALSE;
 	}
 #endif /* SO_BROADCAST */
 
@@ -87,9 +87,11 @@ void createSocket(void)
 	if( setsockopt(fd, SOL_SOCKET, SO_PRIORITY, nptr, sizeof(n)) == -1 )
 	{
 		PERROR("setsockopt");
-		exit(EXIT_FAILURE);
+		return FALSE;
 	}
 #endif /* SO_PRIORITY */
+
+  return TRUE;
 }
 
 void closeSocket(void)
@@ -100,7 +102,7 @@ void closeSocket(void)
 
 extern pthread_mutex_t mlock;
 
-void sendPacket(const worker_data_t * const __restrict__ data)
+int sendPacket(const worker_data_t * const __restrict__ data)
 {
   struct sockaddr_in sin;
   struct config_options *co;
@@ -148,6 +150,8 @@ void sendPacket(const worker_data_t * const __restrict__ data)
   {
 error:
     ERROR("Error sending packet.");
-    exit(EXIT_FAILURE);
+    return FALSE;
   }
+
+  return TRUE;
 }

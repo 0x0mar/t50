@@ -420,7 +420,7 @@ struct config_options *getConfigOptions(int argc, char **argv)
                                 if (co.threads <= 0)
                                 {
                                   fprintf(stderr, "Invalid number of threads (%d).\nIt must be at least one.\n", co.threads);
-                                  exit(EXIT_FAILURE);
+                                  return NULL;
                                 }
                                 break;
 
@@ -466,7 +466,7 @@ struct config_options *getConfigOptions(int argc, char **argv)
                 "%s(): Protocol %s is not implemented\n",
                 __FUNCTION__,
                 optarg);
-            exit(EXIT_FAILURE);
+            return NULL;
           }
 
           if (strcasecmp(tokens[counter], "T50") == 0)
@@ -804,14 +804,14 @@ struct config_options *getConfigOptions(int argc, char **argv)
 
       case 'v':
         show_version();
-        exit(EXIT_FAILURE);
+        return NULL;
 
       /* XXX HELP/USAGE MESSAGE */
       case 'h':
       case '?':
       default:
         usage();
-        exit(EXIT_FAILURE);
+        return NULL;
     }
   }
 
@@ -819,7 +819,7 @@ struct config_options *getConfigOptions(int argc, char **argv)
   if (optind >= argc)
   {
     ERROR("t50 what? try --help for usage");
-    exit(EXIT_FAILURE);
+    return NULL;
   }
 
   /* Get host and cidr. */

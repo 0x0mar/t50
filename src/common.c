@@ -26,11 +26,16 @@ static size_t numOfModules = 0;
 /* FIXME: Maybe we can mark this function __attribute__((inline))? */
 unsigned __RND(unsigned value)
 {
+#ifndef __HAVE_RDRAND__
   struct random_data rndState;
+#endif
 
   if (value == 0)
+#ifdef __HAVE_RDRAND__
+    value = readrand();
+#else
     random_r(&rndState, (int *)&value);
-
+#endif
   return value;
 }
 
@@ -81,3 +86,17 @@ size_t getNumberOfRegisteredModules(void)
 	return numOfModules;
 }
 
+#ifdef __HAVE_RDRAND__
+uint32_t readrand(void)
+{
+  uint32_t d;
+
+  __asm__ __volatile__ (
+    "1:\n"
+    "rdrand %0\n"
+    "jnc 1b" : "=r" (d)
+  );
+
+  return d;
+}
+#endif

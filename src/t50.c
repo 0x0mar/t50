@@ -36,7 +36,8 @@ int main(int argc, char *argv[])
   initialize();
 
   /* Configuring command line interface options. */
-  co = getConfigOptions(argc, argv);
+  if ((co = getConfigOptions(argc, argv)) == NULL)
+    return EXIT_FAILURE;
 
   /* This is a requirement of t50. User must be root to use it. 
      Previously on checkConfigOptions(). */
@@ -52,14 +53,17 @@ int main(int argc, char *argv[])
 
   /* Setup random seed using current date/time timestamp. */
   /* NOTE: Random seed don't need to be so precise! */
+#ifndef __HAVE_RDRAND__
   srandom(time(NULL));
+#endif
 
   /* Calculates CIDR for destination address. */
   cidr_ptr = config_cidr(co->bits, co->ip.daddr);
 
   /* Setting socket file descriptor. */
   /* NOTE: createSocket() handles its own errors before returning. */
-  createSocket();
+  if (!createSocket())
+    return EXIT_FAILURE;
 
   /* Show launch info. */
   lt = time(NULL); 

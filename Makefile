@@ -11,15 +11,15 @@ define checkroot
 	@test $$(id -u) -ne 0 && ( echo 'Need root priviledge'; exit 1 )
 endef
 
-SRC_DIR=./src
-OBJ_DIR=./build
-RELEASE_DIR=./release
-MAN_DIR=/usr/share/man/man8
-INCLUDE_DIR=$(SRC_DIR)/include
+SRC_DIR = ./src
+OBJ_DIR = ./build
+RELEASE_DIR = ./release
+MAN_DIR = /usr/share/man/man8
+INCLUDE_DIR = $(SRC_DIR)/include
 
-TARGET=$(RELEASE_DIR)/t50
+TARGET = $(RELEASE_DIR)/t50
 
-OBJS=$(OBJ_DIR)/modules/ip.o \
+OBJS = $(OBJ_DIR)/modules/ip.o \
 $(OBJ_DIR)/modules/igmpv3.o \
 $(OBJ_DIR)/modules/dccp.o \
 $(OBJ_DIR)/modules/ripv2.o \
@@ -57,40 +57,42 @@ $(OBJ_DIR)/help/ipsec_help.o \
 $(OBJ_DIR)/help/eigrp_help.o \
 $(OBJ_DIR)/help/ospf_help.o
 
-# OBS: Using Linker Time Optiomizer!
-#      -O3 and -fuse-linker-plugin needed on link time to use lto.
-CC=gcc
-DFLAGS=-DVERSION=\"5.5\"
-
 #
 # You can define DEBUG if you want to use GDB. 
 #
-CFLAGS=-Wall -Wextra -I$(INCLUDE_DIR) -std=gnu99
-LDFLAGS=-lpthread
+CC = gcc
+LDFLAGS =
+CFLAGS = -Wno-unused-result -I$(INCLUDE_DIR) -std=gnu99 -DVERSION=\"5.5\" -pthread
 ifdef DEBUG
-	CFLAGS+=-O0
-	DFLAGS+=-D__HAVE_DEBUG__ -g
+  CFLAGS += -O0
+  DFLAGS += -D__HAVE_DEBUG__ -g
 else
-	CFLAGS+=-O3 -mtune=native -flto -ffast-math -fomit-frame-pointer
+  CFLAGS += -O3 -mtune=native -flto -ffast-math -fomit-frame-pointer -DNDEBUG
 
 	# Get architecture
-	ARCH=$(shell arch)
-	ifneq ($(ARCH),x86_64)
-		CFLAGS+=-msse -mfpmath=sse		
-	endif
+  ARCH = $(shell arch)
+  ifneq ($(ARCH),x86_64)
+    CFLAGS += -msse -mfpmath=sse		
+  endif
 
-  DFLAGS+=-DNDEBUG
-	LDFLAGS+=-s -O3 -fuse-linker-plugin -flto
+  ifeq ($(shell grep rdrand /proc/cpuinfo 2>&1 > /dev/null; echo $$?),0)
+    CFLAGS += -D__HAVE_RDRAND__
+  endif
+  ifeq ($(shell grep bmi2 /proc/cpuinfo 2>&1 > /dev/null; echo $$?), 0)
+    CFLAGS += -mbmi2
+  endif
+
+  LDFLAGS += -s -O3 -fuse-linker-plugin -flto
 endif
-CFLAGS+=$(DFLAGS)
+LDFLAGS += -lpthread
 
-.PHONY: all clean install uninstall
+.PHONY: all distclean clean install uninstall
 
 all: $(TARGET)
 
 # link
 $(TARGET): $(OBJS)
-	$(CC) $(LDFLAGS) $^ -o $@
+	$(CC) $^ -o $@ $(LDFLAGS)
 
 # Compile main
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
@@ -104,8 +106,11 @@ $(OBJ_DIR)/help/%.o: $(SRC_DIR)/help/%.c
 $(OBJ_DIR)/modules/%.o: $(SRC_DIR)/modules/%.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
+distclean: clean
+	@rm -rf $(RELEASE_DIR)/t50
+
 clean:
-	@rm -rf $(RELEASE_DIR)/t50 $(OBJ_DIR)/*.o $(OBJ_DIR)/modules/*.o $(OBJ_DIR)/help/*.o
+	@rm -rf $(OBJ_DIR)/*.o $(OBJ_DIR)/modules/*.o $(OBJ_DIR)/help/*.o
 	@echo Binary executable, temporary files and packed manual file deleted.
 
 install:

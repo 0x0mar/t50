@@ -91,8 +91,10 @@ static void balanceWorkersThresholds(const struct config_options * const __restr
   assert(workersData != NULL);
 
   d = div(co->threshold, numOfWorkers);
+
   for (i = 0; i < numOfWorkers; i++)
     workersData[i].threshold = d.quot;
+
   for (i = 0; d.rem--; i++)
     workersData[i].threshold++;  
 }
@@ -118,9 +120,10 @@ static void *worker(void *data)
   while (co->flood || pdata->threshold-- > 0)
   {
     /* Set the destination IP address to RANDOM IP address. */
+    pdata->daddr = cidr_ptr->__1st_addr;
     if (cidr_ptr->hostid)
-      pdata->daddr = htonl(cidr_ptr->__1st_addr + 
-        (__RND(0) % cidr_ptr->hostid));
+      pdata->daddr += (__RND(0) % cidr_ptr->hostid);
+    pdata->daddr = htonl(pdata->daddr);
 
     if (co->ip.protocol == IPPROTO_T50)
       pdata->protocol = ptbl->protocol_id;
@@ -128,7 +131,8 @@ static void *worker(void *data)
     /* NOTE: worker_data_t have all we need! */
     ptbl->func(data);
 
-    sendPacket(data);
+    if (!sendPacket(data))
+      return NULL;
 
     if (co->ip.protocol == IPPROTO_T50)
       if ((++ptbl)->func == NULL)
