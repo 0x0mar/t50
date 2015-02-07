@@ -58,7 +58,8 @@ int main(int argc, char *argv[])
 #endif
 
   /* Calculates CIDR for destination address. */
-  cidr_ptr = config_cidr(co->bits, co->ip.daddr);
+  if ((cidr_ptr = config_cidr(co->bits, co->ip.daddr)) == NULL)
+    return EXIT_FAILURE;
 
   /* Setting socket file descriptor. */
   /* NOTE: createSocket() handles its own errors before returning. */

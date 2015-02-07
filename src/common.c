@@ -26,15 +26,15 @@ static size_t numOfModules = 0;
 /* FIXME: Maybe we can mark this function __attribute__((inline))? */
 unsigned __RND(unsigned value)
 {
-#ifndef __HAVE_RDRAND__
-  struct random_data rndState;
-#endif
-
   if (value == 0)
 #ifdef __HAVE_RDRAND__
     value = readrand();
 #else
+  {
+    struct random_data rndState;
+
     random_r(&rndState, (int *)&value);
+  }
 #endif
   return value;
 }
@@ -43,7 +43,7 @@ unsigned __RND(unsigned value)
 uint32_t NETMASK_RND(uint32_t foo)
 {
   if (foo == INADDR_ANY)
-    foo = ~(0xffffffffUL >> (8 + (__RND(0) % 23)));
+    foo = ~(0xffffffffU >> (8 + (__RND(0) % 23)));
 
   return htonl(foo);
 }

@@ -1022,7 +1022,7 @@ static int getIpAndCidrFromString(char const * const addr, T50_tmp_addr_t *addr_
                     (matches[2] << 8)  |
                     (matches[1] << 16) |
                     (matches[0] << 24)) &
-                      ~(0xffffffffUL >> addr_ptr->cidr);
+                      ~(0xffffffffU >> addr_ptr->cidr);
 
   return 1;
 }
